@@ -1,0 +1,5 @@
+git status              # See what's changed locally
+git add .               # Stage your changes
+git commit -m "message" # Commit your changes
+git pull                # Get latest from remote
+git push                # Push your changes up
