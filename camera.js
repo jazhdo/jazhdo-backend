@@ -15,9 +15,10 @@ const CAMERA_CONFIG = {
 };
 
 // Access config
-const ADMIN_USERNAME = 'jazhdo-backend';
-const ADMIN_PASSWORD = 'BangNoto1!';
-const SECRET_KEY = 'Kj9mP2xQw7nL4vB8zR5tY3hF6dG1sA0uE9cN2oI7pM4kJ8xW5qV3bZ1nH6rT0yU4gL9fD2aS7eX3wC8jK5mN1pQ6vR0zB4hYTEST';
+require('dotenv').config({ path: './.env.local' });
+const ADMIN_USERNAME = process.env.username;
+const ADMIN_PASSWORD = process.env.password;
+const SECRET_KEY = process.env.secret_key;
 
 // Middleware
 app.use(cors());
