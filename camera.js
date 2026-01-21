@@ -55,7 +55,6 @@ function startRecording() {
     const now = Date.now();
     currentRecordingFile = path.join(RECORDINGS_DIR, `recording_${now}.mjpeg`);
     console.log('Recording will save to:', currentRecordingFile);
-    // No spawn needed - stream handles it!
     return currentRecordingFile;
 }
 
@@ -151,13 +150,18 @@ app.get('/api/stream', (req, res) => {
             if (recordingStream) recordingStream.end();
         });
 
-        // If currently recording, open file stream
         if (currentRecordingFile) {
             recordingStream = fs.createWriteStream(currentRecordingFile);
             console.log('Recording stream to:', currentRecordingFile);
         }
 
         stream.stdout.on('data', (chunk) => {
+            frameBuffer = Buffer.concat([frameBuffer, chunk]);
+            if (currentRecordingFile && !recordingStream) {
+                recordingStream = fs.createWriteStream(currentRecordingFile);
+                console.log('Started recording stream to:', currentRecordingFile);
+            }
+            
             recordingStream?.write(chunk);
             frameBuffer = Buffer.concat([frameBuffer, chunk]);
 
