@@ -22,7 +22,12 @@ const SECRET_KEY = process.env.KEY;
 console.log(`Username: ${ADMIN_USERNAME}, Password: ${ADMIN_PASSWORD}, Token encryption key: ${SECRET_KEY}`);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    credentials: true,
+    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 const fsPromises = require('fs').promises;
@@ -151,8 +156,6 @@ app.get('/api/stream', (req, res) => {
         console.log(`Stream started: Width: ${String(CAMERA_CONFIG.width)}, Height: ${String(CAMERA_CONFIG.height)}, FPS: ${fpsToUse}`);
 
         let frameBuffer = Buffer.alloc(0);
-        const MAX_BUFFER_SIZE = 1 * 1024 * 1024; 
-        // The 1 means the MB of max buffer size
 
         stream.on('error', (err) => {
             console.error('Stream error:', err);
