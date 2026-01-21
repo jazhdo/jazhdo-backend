@@ -19,6 +19,7 @@ require('dotenv').config({ path: './.env.local' });
 const ADMIN_USERNAME = process.env.username;
 const ADMIN_PASSWORD = process.env.password;
 const SECRET_KEY = process.env.secret_key;
+console.log(`Username: ${ADMIN_USERNAME}, Password: ${ADMIN_PASSWORD}, Token encryption key: ${SECRET_KEY}`);
 
 // Middleware
 app.use(cors());
