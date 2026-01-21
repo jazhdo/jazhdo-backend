@@ -73,12 +73,20 @@ function startRecording(req) {
         console.error('Recording error:', err);
         currentRecordingFile = null;
     });
+    recordingProcess.on('exit', (code, signal) => {
+        console.log('Recording process exited!');
+        console.log('Exit code:', code);
+        console.log('Signal:', signal);
+        console.log('Time:', new Date().toLocaleString());
+        console.log('File:', currentRecordingFile);
+    });
 
-    recordingProcess.on('exit', (code) => {
-        if (code !== 0) console.log('Recording process exited with code:', code);
+    recordingProcess.stderr.on('data', (data) => {
+        console.log('Recording stderr:', data.toString());
     });
 
     console.log('Recording started:', currentRecordingFile);
+    console.log('PID:', recordingProcess.pid);
     return currentRecordingFile;
 }
 
@@ -94,7 +102,6 @@ function stopRecording() {
     }
     return null;
 }
-
 // Access points
 
 // Device status
