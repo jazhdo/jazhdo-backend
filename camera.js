@@ -159,31 +159,26 @@ app.get('/api/stream', (req, res) => {
             res.end();
         });
 
-        let lastFrame = null;
-
         stream.stdout.on('data', (chunk) => {
             frameBuffer = Buffer.concat([frameBuffer, chunk]);
 
+            // Find JPEG boundaries (0xFFD8 = start, 0xFFD9 = end)
             let startIdx = frameBuffer.indexOf(Buffer.from([0xFF, 0xD8]));
             let endIdx = frameBuffer.indexOf(Buffer.from([0xFF, 0xD9]));
 
             while (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-                lastFrame = frameBuffer.slice(startIdx, endIdx + 2);
+                const frame = frameBuffer.slice(startIdx, endIdx + 2);
+                
+                res.write('--FRAME\r\n');
+                res.write('Content-Type: image/jpeg\r\n');
+                res.write(`Content-Length: ${frame.length}\r\n\r\n`);
+                res.write(frame);
+                res.write('\r\n');
+
                 frameBuffer = frameBuffer.slice(endIdx + 2);
                 startIdx = frameBuffer.indexOf(Buffer.from([0xFF, 0xD8]));
                 endIdx = frameBuffer.indexOf(Buffer.from([0xFF, 0xD9]));
             }
-
-            if (lastFrame) {
-                res.write('--FRAME\r\n');
-                res.write('Content-Type: image/jpeg\r\n');
-                res.write(`Content-Length: ${lastFrame.length}\r\n\r\n`);
-                res.write(lastFrame);
-                res.write('\r\n');
-                lastFrame = null;
-            }
-
-            if (frameBuffer.length > 256 * 1024) frameBuffer = Buffer.alloc(0);
         });
 
         req.on('close', () => { stream.kill('SIGINT'); console.log('Stream stopping...')});
