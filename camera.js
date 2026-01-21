@@ -151,6 +151,8 @@ app.get('/api/stream', (req, res) => {
         console.log(`Stream starting with width: ${String(CAMERA_CONFIG.width)}, height: ${String(CAMERA_CONFIG.height)}, and fps: ${fpsToUse}`);
 
         let frameBuffer = Buffer.alloc(0);
+        const MAX_BUFFER_SIZE = 1 * 1024 * 1024; 
+        // The 1 means the MB of max buffer size
 
         stream.on('error', (err) => {
             console.error('Stream error:', err);
@@ -159,6 +161,8 @@ app.get('/api/stream', (req, res) => {
 
         stream.stdout.on('data', (chunk) => {
             frameBuffer = Buffer.concat([frameBuffer, chunk]);
+
+            if (frameBuffer.length > MAX_BUFFER_SIZE) frameBuffer = frameBuffer.slice(-MAX_BUFFER_SIZE);
 
             let startIdx = frameBuffer.indexOf(Buffer.from([0xFF, 0xD8]));
             let endIdx = frameBuffer.indexOf(Buffer.from([0xFF, 0xD9]));
