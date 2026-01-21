@@ -35,7 +35,7 @@ let currentRecordingFile = null;
 // Authentication middleware
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
-    const token = authHeader?.split(' ')[1];
+    const token = authHeader?.split(' ')[1] || req.query.token;
 
     if (!token) return res.status(401).json({ message: 'Token required' });
 
@@ -140,7 +140,7 @@ app.get('/api/stream', (req, res) => {
             '-t', '0',
             '--width', String(CAMERA_CONFIG.width),
             '--height', String(CAMERA_CONFIG.height),
-            '--framerate', String(res.query.fps || CAMERA_CONFIG.framerate),
+            '--framerate', String(req.query.fps || CAMERA_CONFIG.framerate),
             '--codec', 'mjpeg',
             '--inline',
             '--flush',
