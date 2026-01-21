@@ -136,17 +136,19 @@ app.get('/api/stream', (req, res) => {
             'X-Accel-Buffering': 'no'
         });
 
+        const fpsToUse = String(req.query.fps || CAMERA_CONFIG.framerate);
         const stream = spawn('rpicam-vid', [
             '-t', '0',
             '--width', String(CAMERA_CONFIG.width),
             '--height', String(CAMERA_CONFIG.height),
-            '--framerate', String(req.query.fps || CAMERA_CONFIG.framerate),
+            '--framerate', fpsToUse,
             '--codec', 'mjpeg',
             '--inline',
             '--flush',
             '--nopreview',
             '-o', '-'
         ]);
+        console.log(`Stream starting with width: ${String(CAMERA_CONFIG.width)}, height: ${String(CAMERA_CONFIG.height)}, and fps: ${fpsToUse}`);
 
         let frameBuffer = Buffer.alloc(0);
 
@@ -176,7 +178,7 @@ app.get('/api/stream', (req, res) => {
             }
         });
 
-        req.on('close', () => { stream.kill('SIGINT'); });
+        req.on('close', () => { stream.kill('SIGINT'); console.log('Stream stopping...')});
     });
 });
 
