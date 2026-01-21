@@ -64,9 +64,12 @@ function startRecording(req) {
         '--width', String(CAMERA_CONFIG.width),
         '--height', String(CAMERA_CONFIG.height),
         '--framerate', String(req.query.fps || CAMERA_CONFIG.framerate),
-        '--codec', 'h264',
+        '--codec', 'mjpeg',
         '-b', String(CAMERA_CONFIG.bitrate),
-        '-o', currentRecordingFile
+        '-o', currentRecordingFile,
+        '--inline',
+        '--listen',
+        '-o', 'tcp://127.0.0.1:8888'
     ]);
 
     recordingProcess.on('error', (err) => {
@@ -197,6 +200,27 @@ app.get('/api/stream', (req, res) => {
 
         req.on('close', () => { stream.kill('SIGINT'); console.log('Stream stopped.')});
     });
+});
+
+app.get('/api/recording-stream', authenticateToken, (req, res) => {
+    const net = require('net');
+    
+    res.writeHead(200, {
+        'Content-Type': 'multipart/x-mixed-replace; boundary=FRAME',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+    });
+
+    const client = net.connect(8888, '127.0.0.1', () => {console.log('Connected to recording stream');});
+
+    client.on('data', (data) => {res.write(data);});
+
+    client.on('error', (err) => {
+        console.error('Recording stream error:', err);
+        res.end();
+    });
+
+    req.on('close', () => { client.destroy(); });
 });
 
 // Camera info
