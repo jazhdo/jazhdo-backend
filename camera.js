@@ -56,7 +56,7 @@ function startRecording(req) {
     if (recordingProcess) stopRecording();
 
     const timestamp = Date.now();
-    currentRecordingFile = path.join(RECORDINGS_DIR, `recording_${timestamp}.h264`);
+    currentRecordingFile = path.join(RECORDINGS_DIR, `recording_${timestamp}.mp4`);
 
     // rpicam-vid for recording at 60fps
     recordingProcess = spawn('rpicam-vid', [
@@ -236,7 +236,7 @@ app.get('/api/recordings', authenticateToken, (req, res) => {
         if (err) return res.status(500).json({ message: 'Error reading recordings' });
 
         const recordings = files
-            .filter(f => f.endsWith('.h264'))
+            .filter(f => f.endsWith('.mp4'))
             .map(f => {
                 const filePath = path.join(RECORDINGS_DIR, f);
                 const stats = fs.statSync(filePath);
