@@ -148,7 +148,7 @@ app.get('/api/stream', (req, res) => {
             '--nopreview',
             '-o', '-'
         ]);
-        console.log(`Stream starting with width: ${String(CAMERA_CONFIG.width)}, height: ${String(CAMERA_CONFIG.height)}, and fps: ${fpsToUse}`);
+        console.log(`Stream started: Width: ${String(CAMERA_CONFIG.width)}, Height: ${String(CAMERA_CONFIG.height)}, FPS: ${fpsToUse}`);
 
         let frameBuffer = Buffer.alloc(0);
         const MAX_BUFFER_SIZE = 1 * 1024 * 1024; 
@@ -179,9 +179,13 @@ app.get('/api/stream', (req, res) => {
                 startIdx = frameBuffer.indexOf(Buffer.from([0xFF, 0xD8]));
                 endIdx = frameBuffer.indexOf(Buffer.from([0xFF, 0xD9]));
             }
+            
+            // CRITICAL: Aggressively limit buffer size
+            // If buffer gets bigger than 256KB, just clear it completely
+            if (frameBuffer.length > 256 * 1024) frameBuffer = Buffer.alloc(0);
         });
 
-        req.on('close', () => { stream.kill('SIGINT'); console.log('Stream stopping...')});
+        req.on('close', () => { stream.kill('SIGINT'); console.log('Stream stopped.')});
     });
 });
 
