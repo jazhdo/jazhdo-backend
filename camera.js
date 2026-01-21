@@ -33,8 +33,7 @@ app.use(express.json());
 const fsPromises = require('fs').promises;
 fsPromises.mkdir(RECORDINGS_DIR, { recursive: true }).catch(console.error);
 
-// Camera process and recording state
-let recordingProcess = null;
+// Current file to record to
 let currentRecordingFile = null;
 
 // Authentication middleware
@@ -52,58 +51,39 @@ function authenticateToken(req, res, next) {
 };
 
 // Start recording to file
-function startRecording(req) {
-    if (recordingProcess) stopRecording();
-
-    const timestamp = Date.now();
-    currentRecordingFile = path.join(RECORDINGS_DIR, `recording_${timestamp}.mp4`);
-
-    // rpicam-vid for recording at 60fps
-    recordingProcess = spawn('rpicam-vid', [
-        '-t', '0',
-        '--width', String(CAMERA_CONFIG.width),
-        '--height', String(CAMERA_CONFIG.height),
-        '--framerate', String(req.query.fps || CAMERA_CONFIG.framerate),
-        '--codec', 'mjpeg',
-        '-b', String(CAMERA_CONFIG.bitrate),
-        '-o', currentRecordingFile,
-        '--inline',
-        '--listen',
-        '-o', 'tcp://127.0.0.1:8888'
-    ]);
-
-    recordingProcess.on('error', (err) => {
-        console.error('Recording error:', err);
-        currentRecordingFile = null;
-    });
-    recordingProcess.on('exit', (code, signal) => {
-        console.log('Recording process exited!');
-        console.log('Exit code:', code);
-        console.log('Signal:', signal);
-        console.log('Time:', new Date().toLocaleString());
-        console.log('File:', currentRecordingFile);
-    });
-
-    recordingProcess.stderr.on('data', (data) => {
-        console.log('Recording stderr:', data.toString());
-    });
-
-    console.log('Recording started:', currentRecordingFile);
-    console.log('PID:', recordingProcess.pid);
+function startRecording() {
+    const now = Date.now();
+    currentRecordingFile = path.join(RECORDINGS_DIR, `recording_${now}.mjpeg`);
+    console.log('Recording will save to:', currentRecordingFile);
+    // No spawn needed - stream handles it!
     return currentRecordingFile;
 }
 
+
 // Stop recording
 function stopRecording() {
-    if (recordingProcess) {
-        recordingProcess.kill('SIGINT');
-        recordingProcess = null;
-        const oldFile = currentRecordingFile;
-        currentRecordingFile = null;
-        console.log('Recording stopped:', oldFile);
-        return oldFile;
+    const oldFile = currentRecordingFile;
+    currentRecordingFile = null;
+    console.log('Recording stopped:', oldFile);
+    
+    // Convert MJPEG to MP4
+    if (oldFile) {
+        const ffmpeg = spawn('ffmpeg', [
+            '-f', 'mjpeg',
+            '-i', oldFile,
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-crf', '18',
+            oldFile.replace('.mjpeg', '.mp4')
+        ]);
+        
+        ffmpeg.on('exit', () => {
+            console.log('Converted to MP4:', oldFile.replace('.mjpeg', '.mp4'));
+            fs.unlink(oldFile, () => {}); // Delete MJPEG after conversion
+        });
     }
-    return null;
+    
+    return oldFile;
 }
 // Access points
 
@@ -137,7 +117,6 @@ app.get('/api/stream', (req, res) => {
     // Accept token from header OR query parameter
     const authHeader = req.headers['authorization'];
     const token = authHeader?.split(' ')[1] || req.query.token;
-
     if (!token) return res.status(401).json({ message: `Token required (recieved: "${token}")` });
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
@@ -159,20 +138,27 @@ app.get('/api/stream', (req, res) => {
             '--framerate', fpsToUse,
             '--codec', 'mjpeg',
             '--inline',
-            '--flush',
-            '--nopreview',
             '-o', '-'
         ]);
         console.log(`Stream started: Width: ${String(CAMERA_CONFIG.width)}, Height: ${String(CAMERA_CONFIG.height)}, FPS: ${fpsToUse}`);
 
         let frameBuffer = Buffer.alloc(0);
+        let recordingStream = null;
 
         stream.on('error', (err) => {
             console.error('Stream error:', err);
             res.end();
+            if (recordingStream) recordingStream.end();
         });
 
+        // If currently recording, open file stream
+        if (currentRecordingFile) {
+            recordingStream = fs.createWriteStream(currentRecordingFile);
+            console.log('Recording stream to:', currentRecordingFile);
+        }
+
         stream.stdout.on('data', (chunk) => {
+            recordingStream?.write(chunk);
             frameBuffer = Buffer.concat([frameBuffer, chunk]);
 
             // Find JPEG boundaries (0xFFD8 = start, 0xFFD9 = end)
@@ -193,34 +179,19 @@ app.get('/api/stream', (req, res) => {
                 endIdx = frameBuffer.indexOf(Buffer.from([0xFF, 0xD9]));
             }
             
-            // CRITICAL: Aggressively limit buffer size
-            // If buffer gets bigger than 256KB, just clear it completely
+            // Clear buffer completely if it is higher than 256KB
             if (frameBuffer.length > 256 * 1024) frameBuffer = Buffer.alloc(0);
         });
 
-        req.on('close', () => { stream.kill('SIGINT'); console.log('Stream stopped.')});
+        req.on('close', () => {
+            stream.kill('SIGINT');
+            console.log('Stream stopped.');
+            if (recordingStream) {
+                recordingStream.end();
+                console.log('Recording stream closed');
+            }
+        });
     });
-});
-
-app.get('/api/recording-stream', authenticateToken, (req, res) => {
-    const net = require('net');
-    
-    res.writeHead(200, {
-        'Content-Type': 'multipart/x-mixed-replace; boundary=FRAME',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-    });
-
-    const client = net.connect(8888, '127.0.0.1', () => {console.log('Connected to recording stream');});
-
-    client.on('data', (data) => {res.write(data);});
-
-    client.on('error', (err) => {
-        console.error('Recording stream error:', err);
-        res.end();
-    });
-
-    req.on('close', () => { client.destroy(); });
 });
 
 // Camera info
@@ -228,7 +199,7 @@ app.get('/api/camera/info', authenticateToken, (req, res) => {
     res.json({
         resolution: [CAMERA_CONFIG.width, CAMERA_CONFIG.height],
         fps: CAMERA_CONFIG.framerate,
-        recording: recordingProcess !== null,
+        recording: currentRecordingFile !== null,
         current_file: currentRecordingFile ? path.basename(currentRecordingFile) : null
     });
 });
@@ -316,7 +287,6 @@ app.listen(3000, '0.0.0.0', () => {
 // Cleanup on exit
 process.on('SIGINT', () => {
     console.log('Shutting down...');
-    if (recordingProcess) recordingProcess.kill('SIGINT');
     process.exit();
 });
 
