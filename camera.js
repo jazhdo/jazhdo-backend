@@ -52,7 +52,7 @@ function authenticateToken(req, res, next) {
 };
 
 // Start recording to file
-function startRecording(queryFPS) {
+function startRecording(res) {
     if (recordingProcess) stopRecording();
 
     const timestamp = Date.now();
@@ -63,7 +63,7 @@ function startRecording(queryFPS) {
         '-t', '0',
         '--width', String(CAMERA_CONFIG.width),
         '--height', String(CAMERA_CONFIG.height),
-        '--framerate', String(queryFPS || CAMERA_CONFIG.framerate),
+        '--framerate', String(res.query.fps || CAMERA_CONFIG.framerate),
         '--codec', 'h264',
         '-b', String(CAMERA_CONFIG.bitrate),
         '-o', currentRecordingFile
@@ -204,7 +204,7 @@ app.get('/api/camera/info', authenticateToken, (req, res) => {
 
 // Start recording
 app.post('/api/camera/start-recording', authenticateToken, (req, res) => {
-    const filename = startRecording(res.query.fps);
+    const filename = startRecording(res);
     res.json({
         message: 'Recording started',
         filename: path.basename(filename)
