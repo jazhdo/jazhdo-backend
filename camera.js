@@ -58,7 +58,7 @@ function startRecording() {
         '-t', '0',
         '--width', String(CAMERA_CONFIG.width),
         '--height', String(CAMERA_CONFIG.height),
-        '--framerate', String(CAMERA_CONFIG.framerate),
+        '--framerate', String(res.query.fps || CAMERA_CONFIG.framerate),
         '--codec', 'h264',
         '-b', String(CAMERA_CONFIG.bitrate),
         '-o', currentRecordingFile
@@ -123,24 +123,24 @@ app.get('/api/stream', (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader?.split(' ')[1] || req.query.token;
 
-    if (!token) return res.status(401).json({ message: 'Token required' });
+    if (!token) return res.status(401).json({ message: `Token required (recieved: "${token}")` });
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
         if (err) return res.status(403).json({ message: 'Invalid token' });
         res.writeHead(200, {
             'Content-Type': 'multipart/x-mixed-replace; boundary=FRAME',
             'Cache-Control': 'no-cache, no-store, must-revalidate',
-	    'Pragma': 'no-cache',
-	    'Expires': '0',
+            'Pragma': 'no-cache',
+            'Expires': '0',
             'Connection': 'close',
-	    'X-Accel-Buffering': 'no'
+            'X-Accel-Buffering': 'no'
         });
 
         const stream = spawn('rpicam-vid', [
             '-t', '0',
             '--width', String(CAMERA_CONFIG.width),
             '--height', String(CAMERA_CONFIG.height),
-            '--framerate', String(CAMERA_CONFIG.framerate),
+            '--framerate', String(res.query.fps || CAMERA_CONFIG.framerate),
             '--codec', 'mjpeg',
             '--inline',
             '--flush',
@@ -265,8 +265,9 @@ app.delete('/api/recordings/:filename', authenticateToken, (req, res) => {
 
 // Start server
 app.listen(3000, '0.0.0.0', () => {
-    console.log(`Camera API server running on port 3000`);
-    console.log(`Access at http://localhost:3000`);
+    console.log(`Starting server...`);
+    console.log(`Access at http://RPI_IP_ADDRESS:3000/api/[use]`);
+    console.log('Uses:\n/api/health\n/api/login\n/api/stream/')
 });
 
 // Cleanup on exit
