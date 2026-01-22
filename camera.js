@@ -35,6 +35,7 @@ fsPromises.mkdir(RECORDINGS_DIR, { recursive: true }).catch(console.error);
 
 // Current file to record to
 let currentRecordingFile = null;
+let currentRecordingStream = null;
 
 // Authentication middleware
 function authenticateToken(req, res, next) {
