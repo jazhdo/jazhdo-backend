@@ -73,7 +73,7 @@ function stopRecording(inputFPS) {
                 console.log('Converting to MP4 with FPS:', inputFPS);
                 const ffmpeg = spawn('ffmpeg', [
                     '-y',
-                    '-f', 'image2pipe',
+                    '-f', 'mjepg',
                     '-framerate', String(inputFPS),
                     '-i', oldFile,
                     '-c:v', 'libx264',
@@ -86,7 +86,7 @@ function stopRecording(inputFPS) {
                 
                 ffmpeg.stdout.on('data', () => {}); 
                 ffmpeg.stderr.on('data', (data) => {
-                    console.log('ffmpeg error:', data)
+                    console.log('ffmpeg error:', data.toString())
                 });
                 // ffmpeg.stderr.on('data', (data) => { console.log('ffmpeg:', data.toString()); });
                 
