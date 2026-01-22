@@ -69,30 +69,33 @@ function stopRecording(inputFPS) {
         currentRecordingStream.end(() => {
             console.log('Recording file closed');
             
-            // Convert after file is fully closed
-            if (oldFile && fs.existsSync(oldFile)) {
-                console.log('Converting to MP4 with FPS:', inputFPS);
-                const ffmpeg = spawn('ffmpeg', [
-                    '-f', 'image2pipe',
-                    '-framerate', String(inputFPS),
-                    '-i', oldFile,
-                    '-c:v', 'libx264',
-                    '-preset', 'fast',
-                    '-pix_fmt', 'yuv420p',
-                    '-crf', '18',
-                    '-r', 60,
-                    oldFile.replace('.mjpeg', '.mp4')
-                ]);
-                
-                // ffmpeg.stderr.on('data', (data) => { console.log('ffmpeg:', data.toString()); });
-                
-                ffmpeg.on('exit', (code) => {
-                    if (code === 0) {
-                        console.log('Converted to MP4:', oldFile.replace('.mjpeg', '.mp4'));
-                        fs.unlink(oldFile, () => {});
-                    } else console.error('ffmpeg failed with code:', code);
-                });
-            }
+
+            setTimeout(() => {
+                if (oldFile && fs.existsSync(oldFile)) {
+                    console.log('Converting to MP4 with FPS:', inputFPS);
+                    const ffmpeg = spawn('ffmpeg', [
+                        '-y',
+                        '-f', 'image2pipe',
+                        '-framerate', String(inputFPS),
+                        '-i', oldFile,
+                        '-c:v', 'libx264',
+                        '-preset', 'ultrafast',
+                        '-pix_fmt', 'yuv420p',
+                        '-crf', '23',
+                        '-r', String(inputFPS),
+                        oldFile.replace('.mjpeg', '.mp4')
+                    ]);
+                    
+                    // ffmpeg.stderr.on('data', (data) => { console.log('ffmpeg:', data.toString()); });
+                    
+                    ffmpeg.on('exit', (code) => {
+                        if (code === 0) {
+                            console.log('Converted to MP4:', oldFile.replace('.mjpeg', '.mp4'));
+                            fs.unlink(oldFile, () => {});
+                        } else console.error('ffmpeg failed with code:', code);
+                    });
+                }
+            }, 2000);
         });
         currentRecordingStream = null;
     }
