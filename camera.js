@@ -73,7 +73,7 @@ function stopRecording(inputFPS) {
                 console.log('Converting to MP4 with FPS:', inputFPS);
                 const ffmpeg = spawn('ffmpeg', [
                     '-y',
-                    '-f', 'mjepg',
+                    '-f', 'mjpeg',
                     '-framerate', String(inputFPS),
                     '-i', oldFile,
                     '-c:v', 'libx264',
