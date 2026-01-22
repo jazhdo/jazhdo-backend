@@ -85,7 +85,9 @@ function stopRecording(inputFPS) {
                 ]);
                 
                 ffmpeg.stdout.on('data', () => {}); 
-                ffmpeg.stderr.on('data', () => {});
+                ffmpeg.stderr.on('data', (data) => {
+                    console.log('ffmpeg error:', data)
+                });
                 // ffmpeg.stderr.on('data', (data) => { console.log('ffmpeg:', data.toString()); });
                 
                 ffmpeg.on('exit', (code) => {
