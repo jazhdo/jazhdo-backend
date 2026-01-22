@@ -60,7 +60,7 @@ function startRecording() {
 
 
 // Stop recording
-function stopRecording() {
+function stopRecording(inputFPS) {
     const oldFile = currentRecordingFile;
     currentRecordingFile = null;
     console.log('Recording stopped:', oldFile);
@@ -68,17 +68,19 @@ function stopRecording() {
     // Convert MJPEG to MP4
     if (oldFile) {
         const ffmpeg = spawn('ffmpeg', [
-            '-f', 'mjpeg',
+            '-f', 'image2pipe',
+            'framerate', String(inputFPS),
             '-i', oldFile,
             '-c:v', 'libx264',
             '-preset', 'fast',
             '-crf', '18',
+            '-r', '60',
             oldFile.replace('.mjpeg', '.mp4')
         ]);
         
         ffmpeg.on('exit', () => {
-            console.log('Converted to MP4:', oldFile.replace('.mjpeg', '.mp4'));
-            fs.unlink(oldFile, () => {}); // Delete MJPEG after conversion
+            console.log(`Converted file ${oldFile.replace('.mjpeg', '.mp4')} to MP4 with fps ${inputFPS}`);
+            // fs.unlink(oldFile, () => {}); // Delete MJPEG after conversion
         });
     }
     
@@ -176,7 +178,6 @@ app.get('/api/stream', (req, res) => {
             }
             frameBuffer = Buffer.concat([frameBuffer, chunk]);
 
-            // Find JPEG boundaries (0xFFD8 = start, 0xFFD9 = end)
             let startIdx = frameBuffer.indexOf(Buffer.from([0xFF, 0xD8]));
             let endIdx = frameBuffer.indexOf(Buffer.from([0xFF, 0xD9]));
 
@@ -231,7 +232,7 @@ app.post('/api/camera/start-recording', authenticateToken, (req, res) => {
 
 // Stop recording
 app.post('/api/camera/stop-recording', authenticateToken, (req, res) => {
-    const filename = stopRecording();
+    const filename = stopRecording(req.query.fps || 60);
     
     if (filename) {
         res.json({
