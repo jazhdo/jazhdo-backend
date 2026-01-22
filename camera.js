@@ -63,27 +63,42 @@ function startRecording() {
 function stopRecording(inputFPS) {
     const oldFile = currentRecordingFile;
     currentRecordingFile = null;
-    console.log('Recording stopped:', oldFile);
     
-    // Convert MJPEG to MP4
-    if (oldFile) {
-        const ffmpeg = spawn('ffmpeg', [
-            '-f', 'image2pipe',
-            'framerate', String(inputFPS),
-            '-i', oldFile,
-            '-c:v', 'libx264',
-            '-preset', 'fast',
-            '-crf', '18',
-            '-r', '60',
-            oldFile.replace('.mjpeg', '.mp4')
-        ]);
-        
-        ffmpeg.on('exit', () => {
-            console.log(`Converted file ${oldFile.replace('.mjpeg', '.mp4')} to MP4 with fps ${inputFPS}`);
-            // fs.unlink(oldFile, () => {}); // Delete MJPEG after conversion
+    if (currentRecordingStream) {
+        currentRecordingStream.end(() => {
+            console.log('Recording file closed');
+            
+            // Convert after file is fully closed
+            if (oldFile && fs.existsSync(oldFile)) {
+                console.log('Converting to MP4 with FPS:', inputFPS);
+                const ffmpeg = spawn('ffmpeg', [
+                    '-f', 'image2pipe',
+                    '-framerate', String(inputFPS),
+                    '-i', oldFile,
+                    '-c:v', 'libx264',
+                    '-preset', 'fast',
+                    '-pix_fmt', 'yuv420p',
+                    '-crf', '18',
+                    '-r', 60,
+                    oldFile.replace('.mjpeg', '.mp4')
+                ]);
+                
+                ffmpeg.stderr.on('data', (data) => {
+                    console.log('ffmpeg:', data.toString());
+                });
+                
+                ffmpeg.on('exit', (code) => {
+                    if (code === 0) {
+                        console.log('Converted to MP4:', oldFile.replace('.mjpeg', '.mp4'));
+                        fs.unlink(oldFile, () => {});
+                    } else console.error('ffmpeg failed with code:', code);
+                });
+            }
         });
+        currentRecordingStream = null;
     }
     
+    console.log('Recording stopped:', oldFile);
     return oldFile;
 }
 // Access points
@@ -141,6 +156,7 @@ app.get('/api/stream', (req, res) => {
             '--inline',
             '-o', '-'
         ]);
+        
         console.log(`Stream started: Width: ${String(CAMERA_CONFIG.width)}, Height: ${String(CAMERA_CONFIG.height)}, FPS: ${fpsToUse}`);
 
         let frameBuffer = Buffer.alloc(0);
@@ -152,24 +168,12 @@ app.get('/api/stream', (req, res) => {
             recordingStream?.end();
         });
 
-        if (currentRecordingFile) {
-            recordingStream = fs.createWriteStream(currentRecordingFile);
-            console.log('Recording stream to:', currentRecordingFile);
-        }
-
         stream.stdout.on('data', (chunk) => {
-            frameBuffer = Buffer.concat([frameBuffer, chunk]);
-            if (currentRecordingFile && !recordingStream) {
-                recordingStream = fs.createWriteStream(currentRecordingFile);
-                console.log('Started recording stream to:', currentRecordingFile);
+            if (currentRecordingFile && !currentRecordingStream) {
+                currentRecordingStream = fs.createWriteStream(currentRecordingFile);
+                console.log('Recording to file:', currentRecordingFile);
             }
-            
-            if (recordingStream) {
-                recordingStream.write(chunk);
-                if (!this.frameCount) this.frameCount = 0;
-                this.frameCount++;
-                if (this.frameCount % 100 === 0) console.log(`Recorded ${this.frameCount} chunks because recordingStream is ${recordingStream}`);
-            }
+            currentRecordingStream?.write(chunk);
             frameBuffer = Buffer.concat([frameBuffer, chunk]);
 
             let startIdx = frameBuffer.indexOf(Buffer.from([0xFF, 0xD8]));
@@ -201,6 +205,7 @@ app.get('/api/stream', (req, res) => {
                 recordingStream = null;
                 console.log('Recording stream closed');
             }
+            
         });
     });
 });
