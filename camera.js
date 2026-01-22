@@ -84,9 +84,7 @@ function stopRecording(inputFPS) {
                     oldFile.replace('.mjpeg', '.mp4')
                 ]);
                 
-                ffmpeg.stderr.on('data', (data) => {
-                    console.log('ffmpeg:', data.toString());
-                });
+                // ffmpeg.stderr.on('data', (data) => { console.log('ffmpeg:', data.toString()); });
                 
                 ffmpeg.on('exit', (code) => {
                     if (code === 0) {
