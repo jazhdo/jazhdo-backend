@@ -59,17 +59,16 @@ function startRecording() {
     return currentRecordingFile;
 }
 
-
 // Stop recording
 function stopRecording(inputFPS) {
     const oldFile = currentRecordingFile;
     currentRecordingFile = null;
     
     if (currentRecordingStream) {
-        currentRecordingStream.end(() => {
-            console.log('Recording file closed');
+        currentRecordingStream.end()
+        currentRecordingStream.on('finish', () => {
+            console.log('Recording file closed & finished');
             
-
             setTimeout(() => {
                 if (oldFile && fs.existsSync(oldFile)) {
                     console.log('Converting to MP4 with FPS:', inputFPS);
