@@ -156,13 +156,24 @@ app.get('/api/stream', (req, res) => {
         }
 
         stream.stdout.on('data', (chunk) => {
+                // Write to file if recording
+                if (recordingStream) {
+                recordingStream.write(chunk);
+                // ADD THIS - log every 100 chunks
+
+                }
             frameBuffer = Buffer.concat([frameBuffer, chunk]);
             if (currentRecordingFile && !recordingStream) {
                 recordingStream = fs.createWriteStream(currentRecordingFile);
                 console.log('Started recording stream to:', currentRecordingFile);
             }
             
-            recordingStream?.write(chunk);
+            if (recordingStream) {
+                recordingStream.write(chunk);
+                if (!this.frameCount) this.frameCount = 0;
+                this.frameCount++;
+                if (this.frameCount % 100 === 0) console.log(`Recorded ${this.frameCount} chunks`);
+            }
             frameBuffer = Buffer.concat([frameBuffer, chunk]);
 
             // Find JPEG boundaries (0xFFD8 = start, 0xFFD9 = end)
@@ -192,6 +203,7 @@ app.get('/api/stream', (req, res) => {
             console.log('Stream stopped.');
             if (recordingStream) {
                 recordingStream.end();
+                recordingStream = null;
                 console.log('Recording stream closed');
             }
         });
