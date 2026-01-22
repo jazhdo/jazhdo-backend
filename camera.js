@@ -85,6 +85,8 @@ function stopRecording(inputFPS) {
                         oldFile.replace('.mjpeg', '.mp4')
                     ]);
                     
+                    ffmpeg.stdout.on('data', () => {}); 
+                    ffmpeg.stderr.on('data', () => {});
                     // ffmpeg.stderr.on('data', (data) => { console.log('ffmpeg:', data.toString()); });
                     
                     ffmpeg.on('exit', (code) => {
@@ -279,19 +281,6 @@ app.get('/api/recordings/:filename', authenticateToken, (req, res) => {
     if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found' });
 
     res.download(filePath);
-});
-
-// Delete recording
-app.delete('/api/recordings/:filename', authenticateToken, (req, res) => {
-    const filename = req.params.filename;
-    const filePath = path.join(RECORDINGS_DIR, filename);
-
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found' });
-
-    fs.unlink(filePath, (e) => {
-        if (e) return res.status(500).json({ message: 'Error deleting file' });
-        res.json({ message: 'Recording deleted successfully' });
-    });
 });
 
 // Start server
