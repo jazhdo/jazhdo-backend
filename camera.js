@@ -122,15 +122,14 @@ function stopRecording(inputFPS) {
 // Access points
 
 // Device status
-app.get('/api/health', (req, res) => {
+app.get('/camera/health', (req, res) => {
     res.json({
-        status: 'online',
         timestamp: new Date().toISOString()
     });
 });
 
 // Login
-app.post('/api/login', (req, res) => {
+app.post('/camera/login', (req, res) => {
     const { username, password } = req.body;
 
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
@@ -147,7 +146,7 @@ app.post('/api/login', (req, res) => {
 });
 
 // Stream endpoint
-app.get('/api/stream', (req, res) => {
+app.get('/camera/stream', (req, res) => {
     // Accept token from header OR query parameter
     const authHeader = req.headers['authorization'];
     const token = authHeader?.split(' ')[1] || req.query.token;
@@ -229,7 +228,7 @@ app.get('/api/stream', (req, res) => {
 });
 
 // Camera info
-app.get('/api/camera/info', authenticateToken, (req, res) => {
+app.get('/camera/info', authenticateToken, (req, res) => {
     res.json({
         resolution: [CAMERA_CONFIG.width, CAMERA_CONFIG.height],
         fps: CAMERA_CONFIG.framerate,
@@ -239,7 +238,7 @@ app.get('/api/camera/info', authenticateToken, (req, res) => {
 });
 
 // Start recording
-app.post('/api/camera/start-recording', authenticateToken, (req, res) => {
+app.post('/camera/record/start', authenticateToken, (req, res) => {
     const filename = startRecording();
     res.json({
         message: 'Recording started',
@@ -248,7 +247,7 @@ app.post('/api/camera/start-recording', authenticateToken, (req, res) => {
 });
 
 // Stop recording
-app.post('/api/camera/stop-recording', authenticateToken, (req, res) => {
+app.post('/camera/record/stop', authenticateToken, (req, res) => {
     const filename = stopRecording(Number(req.query.fps) || 60);
     
     if (filename) {
@@ -260,7 +259,7 @@ app.post('/api/camera/stop-recording', authenticateToken, (req, res) => {
 });
 
 // List recordings
-app.get('/api/recordings', authenticateToken, (req, res) => {
+app.get('/camera/recordings', authenticateToken, (req, res) => {
     fs.readdir(RECORDINGS_DIR, (err, files) => {
         if (err) return res.status(500).json({ message: 'Error reading recordings' });
 
@@ -274,7 +273,6 @@ app.get('/api/recordings', authenticateToken, (req, res) => {
                     filename: f,
                     size: stats.size,
                     size_mb: (stats.size / (1024 * 1024)).toFixed(2),
-                    download_url: `/api/recordings/${f}`
                 };
             })
             .sort((a, b) => {
@@ -289,7 +287,7 @@ app.get('/api/recordings', authenticateToken, (req, res) => {
 });
 
 // Download recording
-app.get('/api/recordings/:filename', authenticateToken, (req, res) => {
+app.get('/camera/recordings/:filename', authenticateToken, (req, res) => {
     const filename = req.params.filename;
     const filePath = path.join(RECORDINGS_DIR, filename);
 
@@ -301,54 +299,7 @@ app.get('/api/recordings/:filename', authenticateToken, (req, res) => {
 // Start server
 app.listen(3000, '0.0.0.0', () => {
     console.log(`Starting server...`);
-    console.log(`Access at http://[RPI_IP_ADDRESS]:3000/api/[use]`);
-    console.log(`
-        Uses:
-            1. /api/health
-                returns {
-                    status: 'online',
-                    timestamp: new Date().toISOString()
-                }
-            2. /api/login
-                returns { token }
-            3. /api/stream/
-                returns rpicam-vid stream object
-            4. /api/camera/*
-                a. /api/camera/info
-                    returns {
-                        resolution: [width, height],
-                        fps: fps-integer,
-                        recording: true/false,
-                        current_file: "recording_#############.mjpeg"/null
-                    }
-                b. /api/camera/start-recording
-                    returns {
-                        message: 'Recording started',
-                        filename: "recording_#############.mjpeg"
-                    }
-                c. /api/camera/stop-recording
-                    returns {
-                        message: "Recording stopped",
-                        filename: "recording_#############.mjpeg"
-                    }
-            5. /api/recordings/*
-                a. /api/recordings
-                    returns { 
-                        "recordings": [
-                            {
-                                "filename": "recording_#############.mp4",
-                                "size": ######,
-                                "size_mb": "#.##",
-                                "download_url": "/api/recordings/recording_#############.mp4"
-                            },
-                            {
-                                etc.
-                            }
-                        ]
-                    }
-                b. /api/recordings/:filename
-                    returns recording_#############.mp4 download
-    `)
+    console.log(`Access at http://[RPI_IP_ADDRESS]:3000/camera/[use]`);
 });
 
 // Cleanup on exit
