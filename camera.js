@@ -41,9 +41,7 @@ let currentRecordingStream = null;
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader?.split(' ')[1] || req.query.token;
-
     if (!token) return res.status(401).json({ message: 'Token required' });
-
     jwt.verify(token, SECRET_KEY, (err, user) => {
         if (err) return res.status(403).json({ message: 'Invalid token' });
         req.user = user;
@@ -62,11 +60,9 @@ function startRecording() {
 function stopRecording(inputFPS) {
     const oldFile = currentRecordingFile;
     currentRecordingFile = null;
-    
     if (currentRecordingStream) {
         currentRecordingStream.end()
         currentRecordingStream.once('close', () => {
-
             if (oldFile && fs.existsSync(oldFile) && inputFPS) {
                 console.log('ffmpeg conversion to MP4 with FPS:', inputFPS, 'starting');
                 const ffmpeg = spawn('ffmpeg', [
@@ -115,7 +111,6 @@ function stopRecording(inputFPS) {
         currentRecordingStream.destroy();
         currentRecordingStream = null;
     }
-    
     console.log('Recording stopped:', oldFile);
     return oldFile;
 }
@@ -124,24 +119,33 @@ function stopRecording(inputFPS) {
 // Device status
 app.get('/camera/health', (req, res) => {
     res.json({
+        ip: req.ip.split(':').pop(),
+        userAgent: req.headers['user-agent'],
         timestamp: new Date().toISOString()
+    });
+});
+
+// Camera info
+app.get('/camera/info', authenticateToken, (req, res) => {
+    res.json({
+        resolution: [CAMERA_CONFIG.width, CAMERA_CONFIG.height],
+        fps: CAMERA_CONFIG.framerate,
+        recording: currentRecordingFile !== null,
+        current_file: currentRecordingFile ? path.basename(currentRecordingFile) : null
     });
 });
 
 // Login
 app.post('/camera/login', (req, res) => {
     const { username, password } = req.body;
-
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
         const token = jwt.sign(
             { username },
             SECRET_KEY,
             { expiresIn: '24h' }
         );
-
         return res.json({ token });
     }
-
     res.status(401).json({ message: 'Invalid credentials' });
 });
 
@@ -222,18 +226,7 @@ app.get('/camera/stream', (req, res) => {
                 recordingStream = null;
                 console.log('Recording stream closed');
             }
-            
         });
-    });
-});
-
-// Camera info
-app.get('/camera/info', authenticateToken, (req, res) => {
-    res.json({
-        resolution: [CAMERA_CONFIG.width, CAMERA_CONFIG.height],
-        fps: CAMERA_CONFIG.framerate,
-        recording: currentRecordingFile !== null,
-        current_file: currentRecordingFile ? path.basename(currentRecordingFile) : null
     });
 });
 
@@ -241,45 +234,45 @@ app.get('/camera/info', authenticateToken, (req, res) => {
 app.post('/camera/record/start', authenticateToken, (req, res) => {
     const filename = startRecording();
     res.json({
-        message: 'Recording started',
+        message: 'Recording started.',
         filename: path.basename(filename)
     });
 });
 
 // Stop recording
 app.post('/camera/record/stop', authenticateToken, (req, res) => {
-    const filename = stopRecording(Number(req.query.fps) || 60);
+    const headerFPS = String(req.headers['fps']);
+    if (!headerFPS) console.log('Fps header not found so defaulting to 60 fps.');
+    const filename = stopRecording(Number(headerFPS) || 60);
     
     if (filename) {
         res.json({
             message: 'Recording stopped',
+            fps: headerFPS?'60':headerFPS + '.',
             filename: path.basename(filename)
         });
-    } else { res.status(400).json({ message: 'No active recording' }); }
+    } else { res.json({ message: 'No active recording.' }); }
 });
 
 // List recordings
 app.get('/camera/recordings', authenticateToken, (req, res) => {
     fs.readdir(RECORDINGS_DIR, (err, files) => {
-        if (err) return res.status(500).json({ message: 'Error reading recordings' });
+        if (err) return res.json({ message: 'Error reading recordings.' });
 
         const recordings = files
             .filter(f => f.endsWith('.mp4'))
             .map(f => {
-                const filePath = path.join(RECORDINGS_DIR, f);
-                const stats = fs.statSync(filePath);
+                const stats = fs.statSync(path.join(RECORDINGS_DIR, f)).size;
                 
                 return {
                     filename: f,
-                    size: stats.size,
-                    size_mb: (stats.size / (1024 * 1024)).toFixed(2),
+                    size: stats,
+                    size_mb: (stats / (1024 * 1024)).toFixed(2),
                 };
             })
             .sort((a, b) => {
-                // Extract timestamp from filename (recording_1737295200000.h264)
-                const timeA = parseInt(a.filename.match(/\d+/)[0]);
-                const timeB = parseInt(b.filename.match(/\d+/)[0]);
-                return timeB - timeA; // Newest first
+                // Extract timestamp from filename (recording_1737295200000.mp4) with newest first
+                return parseInt(b.filename.match(/\d+/)[0]) - parseInt(a.filename.match(/\d+/)[0]);
             });
 
         res.json({ recordings });
