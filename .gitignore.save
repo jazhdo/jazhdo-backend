@@ -1,0 +1,7 @@
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Annoying files
+.DS_Store
