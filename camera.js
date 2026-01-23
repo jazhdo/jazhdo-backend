@@ -55,7 +55,6 @@ function authenticateToken(req, res, next) {
 function startRecording() {
     const now = Date.now();
     currentRecordingFile = path.join(RECORDINGS_DIR, `recording_${now}.mjpeg`);
-    console.log('Recording will save to:', currentRecordingFile);
     return currentRecordingFile;
 }
 
@@ -67,10 +66,9 @@ function stopRecording(inputFPS) {
     if (currentRecordingStream) {
         currentRecordingStream.end()
         currentRecordingStream.once('close', () => {
-            console.log('Recording file closed & finished');
 
-            if (oldFile && fs.existsSync(oldFile)) {
-                console.log('Converting to MP4 with FPS:', inputFPS);
+            if (oldFile && fs.existsSync(oldFile) && inputFPS) {
+                console.log('ffmpeg conversion to MP4 with FPS:', inputFPS, 'starting');
                 const ffmpeg = spawn('ffmpeg', [
                     '-y',
                     '-f', 'mjpeg',
@@ -88,20 +86,30 @@ function stopRecording(inputFPS) {
                 ]);
                 
                 ffmpeg.stdout.on('data', () => {}); 
-                ffmpeg.stderr.on('data', (data) => {
-                    console.log('ffmpeg error:', data.toString())
-                });
+                ffmpeg.stderr.on('data', (data) => { console.log('ffmpeg says:\n', data.toString()) });
                 // ffmpeg.stderr.on('data', (data) => { console.log('ffmpeg:', data.toString()); });
                 
                 ffmpeg.on('exit', (code) => {
                     if (code === 0) {
-                        console.log('Converted to MP4:', oldFile.replace('.mjpeg', '.mp4'));
+                        console.log('ffmpeg conversion successful:', oldFile.replace('.mjpeg', '.mp4'));
                         fs.unlink(oldFile, () => {});
-                    } else console.error('ffmpeg failed with code:', code);
+                    } else if (code === 234) {
+                        console.log('Invalid input, see logs (Code 234)')
+                    } else console.error('ffmpeg conversion failed (Code '+code+')');
+                    // Destroy remaining processes to prevent Error 234
                     ffmpeg.stdin.destroy();
                     ffmpeg.stdout.destroy();
                     ffmpeg.stderr.destroy();
                 });
+            } else {
+                let errorsMessage = '';
+                let errorsList = [];
+                errorsList += oldFile ? '' : `input pathname doesn't exist: ${oldFile}`;
+                errorsList += fs.existsSync(oldFile) ? '' : `fs doesn't have a sync with file ${oldFile}`;
+                errorsList += inputFPS ? '' : `the input FPS was invalid: ${inputFPS}`;
+                errorsList?.forEach((e) => {errorsMessage += `\n${e}`});
+                if (!errorsList) errorsMessage = '\nno errors';
+                console.log('Conversion not done because of the errors:', errorsMessgae);
             }
         });
         currentRecordingStream.destroy();
@@ -241,7 +249,7 @@ app.post('/api/camera/start-recording', authenticateToken, (req, res) => {
 
 // Stop recording
 app.post('/api/camera/stop-recording', authenticateToken, (req, res) => {
-    const filename = stopRecording(req.query.fps || 60);
+    const filename = stopRecording(Number(req.query.fps) || 60);
     
     if (filename) {
         res.json({
@@ -293,13 +301,59 @@ app.get('/api/recordings/:filename', authenticateToken, (req, res) => {
 // Start server
 app.listen(3000, '0.0.0.0', () => {
     console.log(`Starting server...`);
-    console.log(`Access at http://RPI_IP_ADDRESS:3000/api/[use]`);
-    console.log('Uses:\n/api/health\n/api/login\n/api/stream/')
+    console.log(`Access at http://[RPI_IP_ADDRESS]:3000/api/[use]`);
+    console.log(`
+        Uses:
+            1. /api/health
+                returns {
+                    status: 'online',
+                    timestamp: new Date().toISOString()
+                }
+            2. /api/login
+                returns { token }
+            3. /api/stream/
+                returns rpicam-vid stream object
+            4. /api/camera/*
+                a. /api/camera/info
+                    returns {
+                        resolution: [width, height],
+                        fps: fps-integer,
+                        recording: true/false,
+                        current_file: "recording_#############.mjpeg"/null
+                    }
+                b. /api/camera/start-recording
+                    returns {
+                        message: 'Recording started',
+                        filename: "recording_#############.mjpeg"
+                    }
+                c. /api/camera/stop-recording
+                    returns {
+                        message: "Recording stopped",
+                        filename: "recording_#############.mjpeg"
+                    }
+            5. /api/recordings/*
+                a. /api/recordings
+                    returns { 
+                        "recordings": [
+                            {
+                                "filename": "recording_#############.mp4",
+                                "size": ######,
+                                "size_mb": "#.##",
+                                "download_url": "/api/recordings/recording_#############.mp4"
+                            },
+                            {
+                                etc.
+                            }
+                        ]
+                    }
+                b. /api/recordings/:filename
+                    returns recording_#############.mp4 download
+    `)
 });
 
 // Cleanup on exit
 process.on('SIGINT', () => {
-    console.log('Shutting down...');
+    console.log('\nShutting down...');
     process.exit();
 });
 
