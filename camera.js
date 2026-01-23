@@ -299,7 +299,7 @@ app.get('/camera/recordings/:filename', authenticateToken, (req, res) => {
 // Start server
 app.listen(3000, '0.0.0.0', () => {
     console.log(`Starting server...`);
-    console.log(`Access at http://[RPI_IP_ADDRESS]:3000/camera/[use]`);
+    console.log(`Access at http://[RPI_IP_ADDRESS]:3000/camera/\nUsage guide can be found at https://github.com/jazhdo/jazhdo-backend/wiki`);
 });
 
 // Cleanup on exit
