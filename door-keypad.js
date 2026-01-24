@@ -1,8 +1,8 @@
-const i2c = require('i2c-bus');
-const LCD = require('lcd');
-const { Gpio } = require('pigpio');
-const { initializeApp } = require('firebase/app');
-const { getFirestore, getDoc, doc } = require('firebase/firestore');
+import i2c from 'i2c-bus';
+import LCD from 'lcd';
+import { Gpio } from 'pigpio';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, getDoc, doc } from 'firebase/firestore';
 
 const firebaseConfig = {
     apiKey: "AIzaSyAHm5_zvReOaA6RpttJ1KlIhoONis99MKA",
