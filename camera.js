@@ -41,9 +41,9 @@ let currentRecordingStream = null;
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader?.split(' ')[1] || req.query.token;
-    if (!token) return res.status(401).json({ message: 'Token required' });
+    if (!token) return res.status(401).json({ message: 'Error token required' });
     jwt.verify(token, SECRET_KEY, (err, user) => {
-        if (err) return res.status(403).json({ message: 'Invalid token' });
+        if (err) return res.status(400).json({ message: 'Error token invalid' });
         req.user = user;
         next();
     });
@@ -118,7 +118,7 @@ function stopRecording(inputFPS) {
 
 // Device status
 app.get('/camera/health', (req, res) => {
-    res.json({
+    res.status(200).json({
         ip: req.ip.split(':').pop(),
         userAgent: req.headers['user-agent'],
         timestamp: new Date().toISOString()
@@ -127,7 +127,7 @@ app.get('/camera/health', (req, res) => {
 
 // Camera info
 app.get('/camera/info', authenticateToken, (req, res) => {
-    res.json({
+    res.status(200).json({
         resolution: [CAMERA_CONFIG.width, CAMERA_CONFIG.height],
         fps: CAMERA_CONFIG.framerate,
         recording: currentRecordingFile !== null,
@@ -144,9 +144,9 @@ app.post('/camera/login', (req, res) => {
             SECRET_KEY,
             { expiresIn: '24h' }
         );
-        return res.json({ token });
+        return res.status(201).json({ token });
     }
-    res.status(401).json({ message: 'Invalid credentials' });
+    res.status(401).json({ message: 'Error credentials incorrect' });
 });
 
 // Stream endpoint
@@ -154,10 +154,10 @@ app.get('/camera/stream', (req, res) => {
     // Accept token from header OR query parameter
     const authHeader = req.headers['authorization'];
     const token = authHeader?.split(' ')[1] || req.query.token;
-    if (!token) return res.status(401).json({ message: `Token required (recieved: "${token}")` });
+    if (!token) return res.status(401).json({ message: `Error token required` });
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
-        if (err) return res.status(403).json({ message: 'Invalid token' });
+        if (err) return res.status(400).json({ message: 'Error token invalid' });
         res.writeHead(200, {
             'Content-Type': 'multipart/x-mixed-replace; boundary=FRAME',
             'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -233,7 +233,7 @@ app.get('/camera/stream', (req, res) => {
 // Start recording
 app.post('/camera/record/start', authenticateToken, (req, res) => {
     const filename = startRecording();
-    res.json({
+    res.status(201).json({
         message: 'Recording started.',
         filename: path.basename(filename)
     });
@@ -246,18 +246,18 @@ app.post('/camera/record/stop', authenticateToken, (req, res) => {
     const filename = stopRecording(Number(headerFPS) || 60);
     
     if (filename) {
-        res.json({
-            message: 'Recording stopped',
+        res.status(201).json({
+            message: 'Recording stopped.',
             fps: headerFPS?'60':headerFPS + '.',
             filename: path.basename(filename)
         });
-    } else { res.json({ message: 'No active recording.' }); }
+    } else { res.status(404).json({ message: 'Error stopping undefined recording' }); }
 });
 
 // List recordings
 app.get('/camera/recordings', authenticateToken, (req, res) => {
     fs.readdir(RECORDINGS_DIR, (err, files) => {
-        if (err) return res.json({ message: 'Error reading recordings.' });
+        if (err) return res.status(500).json({ message: 'Error recording unreadable' });
 
         const recordings = files
             .filter(f => f.endsWith('.mp4'))
@@ -275,7 +275,7 @@ app.get('/camera/recordings', authenticateToken, (req, res) => {
                 return parseInt(b.filename.match(/\d+/)[0]) - parseInt(a.filename.match(/\d+/)[0]);
             });
 
-        res.json({ recordings });
+        res.status(200).json({ recordings });
     });
 });
 
@@ -284,7 +284,7 @@ app.get('/camera/recordings/:filename', authenticateToken, (req, res) => {
     const filename = req.params.filename;
     const filePath = path.join(RECORDINGS_DIR, filename);
 
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found' });
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'Error file not found' });
 
     res.download(filePath);
 });
