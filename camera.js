@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const UAParser = require('ua-parser-js');
 
 const app = express();
 const RECORDINGS_DIR = './camera-recordings';
@@ -116,11 +117,12 @@ function stopRecording(inputFPS) {
 }
 // Access points
 
-// Device status
+// Connection status
 app.get('/camera/health', (req, res) => {
+    const parser = new UAParser(req.headers['user-agent']);
     res.status(200).json({
         ip: req.ip.split(':').pop(),
-        userAgent: req.headers['user-agent'],
+        userAgent: parser.getResult(),
         timestamp: new Date().toISOString()
     });
 });
