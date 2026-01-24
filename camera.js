@@ -90,9 +90,8 @@ function stopRecording(inputFPS) {
                     if (code === 0) {
                         console.log('ffmpeg conversion successful:', oldFile.replace('.mjpeg', '.mp4'));
                         fs.unlink(oldFile, () => {});
-                    } else if (code === 234) {
-                        console.log('Invalid input, see logs (Code 234)')
-                    } else console.error('ffmpeg conversion failed (Code '+code+')');
+                    } else if (code === 234) console.log('Invalid input, see logs (Code 234)')
+                    else console.error('ffmpeg conversion failed (Code '+code+')');
                     // Destroy remaining processes to prevent Error 234
                     ffmpeg.stdin.destroy();
                     ffmpeg.stdout.destroy();
@@ -254,7 +253,7 @@ app.post('/camera/record/stop', authenticateToken, (req, res) => {
 });
 
 // List recordings
-app.get('/camera/recordings', authenticateToken, (req, res) => {
+app.get('/camera/record/list', authenticateToken, (req, res) => {
     fs.readdir(RECORDINGS_DIR, (err, files) => {
         if (err) return res.status(500).json({ message: 'Error recording unreadable' });
 
@@ -279,7 +278,7 @@ app.get('/camera/recordings', authenticateToken, (req, res) => {
 });
 
 // Download recording
-app.get('/camera/recordings/:filename', authenticateToken, (req, res) => {
+app.get('/camera/record/get/:filename', authenticateToken, (req, res) => {
     const filename = req.params.filename;
     const filePath = path.join(RECORDINGS_DIR, filename);
 
