@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const RECORDINGS_DIR = '/home/raspberrypi/jazhdo_backend';
+const RECORDINGS_DIR = './camera-recordings';
 const CAMERA_CONFIG = {
     width: 1536,
     height: 864,
@@ -152,8 +152,7 @@ app.post('/camera/login', (req, res) => {
 // Stream endpoint
 app.get('/camera/stream', (req, res) => {
     // Accept token from header OR query parameter
-    const authHeader = req.headers['authorization'];
-    const token = authHeader?.split(' ')[1] || req.query.token;
+    const token = req.headers['authorization']?.split(' ')[1] || req.query.token;
     if (!token) return res.status(401).json({ message: `Error token required` });
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
@@ -203,9 +202,7 @@ app.get('/camera/stream', (req, res) => {
             while (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
                 const frame = frameBuffer.slice(startIdx, endIdx + 2);
                 
-                res.write('--FRAME\r\n');
-                res.write('Content-Type: image/jpeg\r\n');
-                res.write(`Content-Length: ${frame.length}\r\n\r\n`);
+                res.write('--FRAME\r\nContent-Type: image/jpeg\r\nContent-Length: ${frame.length}\r\n\r\n');
                 res.write(frame);
                 res.write('\r\n');
 
@@ -300,4 +297,3 @@ process.on('SIGINT', () => {
     console.log('\nShutting down...');
     process.exit();
 });
-
