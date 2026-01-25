@@ -191,13 +191,13 @@ while (true) {
             } else if (key === '*') {
                 textMessage = textMessage.slice(0, -1);
                 textReset();
-                clear();
+                lcd.clear();
                 textPrint('msg:'+textMessage);
             } else if (key === '#') {
                 console.log('Message sent:', textMessage);
                 textReset();
                 textMessage = '';
-                clear();
+                lcd.clear();
                 lcd.print('msg:');
             } else if (key === 'B') {
                 textReset();
