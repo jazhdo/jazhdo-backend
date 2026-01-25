@@ -165,11 +165,12 @@ while (true) {
             if (!isNaN(key) && Object.keys(letters).includes(key)) {
                 if (key !== textLetter) {
                     textMessage += getLetter(textLetter, textLetterLength);
-                    textTime = Date().now();
+                    textTime = Date.now();
                     textLetterLength = 1;
                     textLetter = key
-                } else if (Date().now() - textTime >= 1200) {
+                } else if (Date.now() - textTime >= 1200) {
                     textMessage += getLetter(textLetter, textLetterLength);
+                    textLetter = null;
                 }
                 lcd.clear();
                 lcd.print('msg:', textMessage)
