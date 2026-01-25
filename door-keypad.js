@@ -130,7 +130,7 @@ let textLetterLength = 0;
 let textLetter = '';
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
-function getLetter(key, times) {
+async function getLetter(key, times) {
     if (!key) return ''
     return letters[key][times % letters[key].length];
 }
@@ -173,7 +173,7 @@ while (true) {
         if (textMode) {
             if (!isNaN(key) && Object.keys(letters).includes(key)) {
                 if (key !== textLetter) {
-                    textMessage += getLetter(textLetter, textLetterLength);
+                    textMessage += await getLetter(textLetter, textLetterLength);
                     textTime = Date.now();
                     textLetterLength = 0;
                     textLetter = key;
@@ -259,8 +259,9 @@ while (true) {
         if (key == '*') action = 'Deleted.';
         console.log('Action: '+String(action));
     } else if (textMode && textTime && Date.now() - textTime >= 1000) {
-        textMessage += getLetter(textLetter, textLetterLength);
+        textMessage += await getLetter(textLetter, textLetterLength);
         textReset();
+        lcd.print('msg:'+textMessage)
         console.log('Adding letter because of timeout.');
     }
     last = key;
