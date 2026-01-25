@@ -1,8 +1,89 @@
 import i2c from 'i2c-bus';
-import LCD from 'lcd';
+// import LCD from 'lcd';
 import gpiox from '@iiot2k/gpiox';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, getDoc, doc } from 'firebase/firestore';
+
+// Replacement LCD library written by claude
+class LCD {
+    constructor(bus = 1, address = 0x27, cols = 16, rows = 2) {
+        this.bus = i2c.openSync(bus);
+        this.address = address;
+        this.cols = cols;
+        this.rows = rows;
+        this.backlight = 0x08;
+    }
+    
+    init() {
+        this.write4bits(0x03 << 4);
+        this.delayMicroseconds(4500);
+        this.write4bits(0x03 << 4);
+        this.delayMicroseconds(4500);
+        this.write4bits(0x03 << 4);
+        this.delayMicroseconds(150);
+        this.write4bits(0x02 << 4);
+        
+        this.command(0x28); // 4-bit, 2 line, 5x8
+        this.command(0x0C); // Display on, cursor off
+        this.command(0x06); // Entry mode
+        this.clear();
+    }
+    
+    clear() {
+        this.command(0x01);
+        this.delayMicroseconds(2000);
+    }
+    
+    print(text, lineNumber) {
+        if (!lineNumber) lineNumber = 1;
+        if (lineNumber < 1 || lineNumber > this.rows) {
+            throw new Error(`Invalid line number. Must be 1-${this.rows}`);
+        }
+        
+        const rowOffsets = [0x00, 0x40];
+        this.command(0x80 | rowOffsets[lineNumber - 1]);
+        
+        const truncated = text.slice(0, this.cols).padEnd(this.cols, ' ');
+        for (let i = 0; i < truncated.length; i++) {
+            this.sendData(truncated.charCodeAt(i));
+        }
+    }
+    
+    // Internal methods
+    command(value) { this.send(value, 0) }
+    
+    sendData(value) { this.send(value, 1) }
+    
+    send(value, mode) {
+        const highNibble = value & 0xF0;
+        const lowNibble = (value << 4) & 0xF0;
+        this.write4bits(highNibble | mode);
+        this.write4bits(lowNibble | mode);
+    }
+    
+    write4bits(value) {
+        const data = value | this.backlight;
+        this.bus.writeByteSync(this.address, data);
+        this.pulseEnable(data);
+    }
+    
+    pulseEnable(data) {
+        this.bus.writeByteSync(this.address, data | 0x04);
+        this.delayMicroseconds(1);
+        this.bus.writeByteSync(this.address, data & ~0x04);
+        this.delayMicroseconds(50);
+    }
+    
+    delayMicroseconds(us) {
+        const start = process.hrtime.bigint();
+        while (Number(process.hrtime.bigint() - start) / 1000 < us) {}
+    }
+    
+    close() {
+        this.clear();
+        this.bus.closeSync();
+    }
+}
 
 const firebaseConfig = {
     apiKey: "AIzaSyAHm5_zvReOaA6RpttJ1KlIhoONis99MKA",
@@ -15,13 +96,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const i2cBus = i2c.openSync(1);
-const lcd = new LCD({
-    i2c: i2cBus,
-    address: 0x27,
-    cols: 16,
-    rows: 2
-});
+const lcd = new LCD(1, 0x27, 16, 2);
+lcd.init();
 
 // Keypad config (GPIOs)
 const rows = [17, 27, 22, 23];
