@@ -128,6 +128,7 @@ function getLetter(key, times) {
     if (!key || !times) return ''
     if (((key === 7 || key === 9) && times > 4)) { times = times%4; }
     else if ((key !== 7 && key !== 9) && times > 3) { times = times%3; }
+    console.log('Adding', letters[key][times], 'to message.')
     return letters[key][times]
 }
 
@@ -166,19 +167,24 @@ while (true) {
                 if (key !== textLetter) {
                     textMessage += getLetter(textLetter, textLetterLength);
                     textTime = Date.now();
-                    textLetterLength = 1;
+                    textLetterLength = 0;
                     textLetter = key
+                    console.log('Next letter.');
                 } else if (Date.now() - textTime >= 1200) {
                     textMessage += getLetter(textLetter, textLetterLength);
                     textLetter = null;
+                    console.log('Adding letter because of timeout.')
+                } else {
+                    textLetterLength++;
+                    console.log('Repeated press.')
                 }
                 console.log('textMessage Contents:', textMessage, 'Current letter #:', textLetterLength);
                 lcd.clear();
-                lcd.print('msg:', textMessage)
+                lcd.print('msg: '+textMessage)
             } else if (key === '*') {
                 textMessage = textMessage.slice(0, -1);
                 lcd.clear();
-                lcd.print('msg:', textMessage);
+                lcd.print('msg: '+textMessage);
             } else if (key === '#') {
                 console.log('Message sent:', textMessage)
                 lcd.clear();
