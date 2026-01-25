@@ -131,17 +131,13 @@ process.on('SIGINT', () => {
 while (true) {
     let key = null;
     for (let ci = 0; ci < cols.length; ci++) {
-        // console.log(`Scanning col ${ci} (pin ${cols[ci]})`);
         gpiox.set_gpio(cols[ci], 1);
         await sleep(1);
         
         for (let ri = 0; ri < rows.length; ri++) {
-            const value = gpiox.get_gpio(rows[ri]);
-            // console.log(`  Row ${ri} (pin ${rows[ri]}): ${value}`);
-            
+            const value = gpiox.get_gpio(rows[ri]);            
             if (value === true) {
                 key = keys[ri][ci];
-                console.log(`  *** KEY FOUND: ${key} ***`);
                 break;
             }
         }
