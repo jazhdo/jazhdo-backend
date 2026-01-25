@@ -15,33 +15,18 @@ class LCD {
     }
     
     init() {
-        console.log('Starting init...');
-        try {
-            console.log('Step 1');
-            this.write4bits(0x03 << 4);
-            this.delayMicroseconds(4500);
-            
-            console.log('Step 2');
-            this.write4bits(0x03 << 4);
-            this.delayMicroseconds(4500);
-            
-            console.log('Step 3');
-            this.write4bits(0x03 << 4);
-            this.delayMicroseconds(150);
-            
-            console.log('Step 4');
-            this.write4bits(0x02 << 4);
-            
-            console.log('Step 5 - sending commands');
-            this.command(0x28);
-            this.command(0x0C);
-            this.command(0x06);
-            this.clear();
-            console.log('Init complete!');
-        } catch (error) {
-            console.error('Init failed at:', error);
-            throw error;
-        }
+        this.write4bits(0x03 << 4);
+        this.delayMicroseconds(4500);
+        this.write4bits(0x03 << 4);
+        this.delayMicroseconds(4500);
+        this.write4bits(0x03 << 4);
+        this.delayMicroseconds(150);
+        this.write4bits(0x02 << 4);
+        
+        this.command(0x28);
+        this.command(0x0C);
+        this.command(0x06);
+        this.clear();
     }
     
     clear() {
@@ -49,10 +34,9 @@ class LCD {
         this.delayMicroseconds(2000);
     }
     
-    print(text, lineNumber) {
-        if (!lineNumber) lineNumber = 1;
+    write(lineNumber, text) {
         if (lineNumber < 1 || lineNumber > this.rows) {
-            throw new Error(`Invalid line number. Must be 1-${this.rows}`);
+        throw new Error(`Invalid line number. Must be 1-${this.rows}`);
         }
         
         const rowOffsets = [0x00, 0x40];
@@ -60,14 +44,17 @@ class LCD {
         
         const truncated = text.slice(0, this.cols).padEnd(this.cols, ' ');
         for (let i = 0; i < truncated.length; i++) {
-            this.sendData(truncated.charCodeAt(i));
+        this.sendData(truncated.charCodeAt(i));
         }
     }
     
-    // Internal methods
-    command(value) { this.send(value, 0) }
+    command(value) {
+        this.send(value, 0);
+    }
     
-    sendData(value) { this.send(value, 1) }
+    sendData(value) {
+        this.send(value, 1);
+    }
     
     send(value, mode) {
         const highNibble = value & 0xF0;
@@ -77,18 +64,15 @@ class LCD {
     }
     
     write4bits(value) {
-        if (typeof value !== 'number' || isNaN(value)) throw new Error(`Invalid value: ${value}`);
-        console.log('write4bits value:', value);
         const data = value | this.backlight;
-        console.log('data:', data, 'backlight:', this.backlight);
-        this.bus.writeByteSync(this.address, data);
+        this.bus.sendByteSync(this.address, data);  // ? FIX: sendByteSync
         this.pulseEnable(data);
     }
     
     pulseEnable(data) {
-        this.bus.writeByteSync(this.address, data | 0x04);
+        this.bus.sendByteSync(this.address, data | 0x04);  // ? FIX
         this.delayMicroseconds(1);
-        this.bus.writeByteSync(this.address, data & ~0x04);
+        this.bus.sendByteSync(this.address, data & ~0x04);  // ? FIX
         this.delayMicroseconds(50);
     }
     
