@@ -127,7 +127,7 @@ let textFlashStatus = false;
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 function getLetter(key, times) {
-    if (!key || !times) return ''
+    if (!key) return ''
     console.log('Adding', letters[key][times], 'to message.')
     return letters[key][times % letters[key].length];
 }
@@ -244,6 +244,7 @@ while (true) {
                         }
                     }
                     lcd.clear();
+                    lcd.print('Passcode:');
                     value = '';
                     break;
                 case '*':
