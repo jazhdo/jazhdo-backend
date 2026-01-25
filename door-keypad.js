@@ -139,10 +139,8 @@ function textReset() {
 }
 async function textFlash() {
     if (textFlashStatus) {
-        lcd.clear();
         lcd.print('msg: '+textMessage.slice(0, -1));
         await sleep(500);
-        lcd.clear();
         lcd.print('msg: '+textMessage);
         await sleep(500);
     }
