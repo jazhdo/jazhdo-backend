@@ -123,7 +123,7 @@ let textTime = null;
 let textMessage = '';
 let textLetterLength = 0;
 let textLetter = '';
-let textFlash = false;
+let textFlashStatus = false;
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 function getLetter(key, times) {
