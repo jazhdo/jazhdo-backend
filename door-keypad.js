@@ -144,7 +144,7 @@ function textReset() {
 }
 async function textFlash() {
     const char = getLetter(textLetter, textLetterLength);
-    const pos = textMessage.length + 3;
+    const pos = textMessage.length + 4;
     lcd.printLocation(pos, 0, char);
     if (!textFlashStatus) return
     await sleep(500);
