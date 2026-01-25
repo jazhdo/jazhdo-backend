@@ -152,11 +152,11 @@ while (true) {
     if (key && key !== last) {
         switch (key) {
             case '#':
-                allowedRef = doc(db, 'passcodes', 'allowed');
-                prohibitedRef = doc(db, 'passcodes', 'prohibited');
+                const allowedRef = doc(db, 'passcodes', 'allowed');
+                const prohibitedRef = doc(db, 'passcodes', 'prohibited');
 
-                allowedSnap = await getDoc(allowedRef) || {};
-                prohibitedSnap = await getDoc(prohibitedRef) || {};
+                const allowedSnap = await getDoc(allowedRef) || {};
+                const prohibitedSnap = await getDoc(prohibitedRef) || {};
 
                 lcd.clear();
                 if (Object.values(prohibitedSnap.data()).includes(value)) {
