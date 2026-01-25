@@ -62,7 +62,10 @@ class LCD {
     }
     
     write4bits(value) {
+        if (typeof value !== 'number' || isNaN(value)) throw new Error(`Invalid value: ${value}`);
+        console.log('write4bits value:', value);
         const data = value | this.backlight;
+        console.log('data:', data, 'backlight:', this.backlight);
         this.bus.writeByteSync(this.address, data);
         this.pulseEnable(data);
     }
