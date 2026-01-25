@@ -125,6 +125,7 @@ let textLetter = '';
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 function getLetter(key, times) {
+    if (!key || !times) return ''
     if (((key === 7 || key === 9) && times > 4)) { times = times%4; }
     else if ((key !== 7 && key !== 9) && times > 3) { times = times%3; }
     return letters[key][times]
