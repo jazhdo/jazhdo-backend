@@ -34,7 +34,8 @@ class LCD {
         this.delayMicroseconds(2000);
     }
     
-    write(lineNumber, text) {
+    print(text, lineNumber) {
+        if (!lineNumber) { lineNumber = 1 }
         if (lineNumber < 1 || lineNumber > this.rows) {
             throw new Error(`Invalid line number. Must be 1-${this.rows}`);
         }
