@@ -148,7 +148,7 @@ async function textFlash() {
     if (!textFlashStatus) return
     await sleep(500);
     if (!textFlashStatus) return
-    lcd.printLocation(pos, 0, '');
+    lcd.printLocation(pos, 0, ' ');
     if (!textFlashStatus) return
     await sleep(500);
     if (!textFlashStatus) return
