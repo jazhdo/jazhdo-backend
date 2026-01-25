@@ -36,7 +36,7 @@ class LCD {
     
     write(lineNumber, text) {
         if (lineNumber < 1 || lineNumber > this.rows) {
-        throw new Error(`Invalid line number. Must be 1-${this.rows}`);
+            throw new Error(`Invalid line number. Must be 1-${this.rows}`);
         }
         
         const rowOffsets = [0x00, 0x40];
@@ -44,7 +44,7 @@ class LCD {
         
         const truncated = text.slice(0, this.cols).padEnd(this.cols, ' ');
         for (let i = 0; i < truncated.length; i++) {
-        this.sendData(truncated.charCodeAt(i));
+            this.sendData(truncated.charCodeAt(i));
         }
     }
     
