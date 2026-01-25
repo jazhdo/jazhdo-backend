@@ -139,7 +139,7 @@ while (true) {
             const value = gpiox.get_gpio(rows[ri]);
             // console.log(`  Row ${ri} (pin ${rows[ri]}): ${value}`);
             
-            if (value === 1) {
+            if (value === true) {
                 key = keys[ri][ci];
                 console.log(`  *** KEY FOUND: ${key} ***`);
                 break;
