@@ -172,6 +172,7 @@ while (true) {
                     textMessage += getLetter(textLetter, textLetterLength);
                     textLetter = null;
                 }
+                console.log('textMessage Contents:', textMessage, 'Current letter #:', textLetterLength);
                 lcd.clear();
                 lcd.print('msg:', textMessage)
             } else if (key === '*') {
