@@ -139,6 +139,10 @@ function textReset() {
     textLetterLength = 0;
     textLetter = '';
 }
+function textPrint(text) {
+    lcd.print(text.slice(0, 16));
+    lcd.print(text.slice(16), 2);
+}
 
 lcd.print('Initial Code Completed');
 console.log('Init Code Done');
@@ -171,7 +175,7 @@ while (true) {
     }
     if (key && key !== last) {
         if (textMode) {
-            if (!isNaN(key) && Object.keys(letters).includes(key)) {
+            if (!isNaN(key) && Object.keys(letters).includes(key) && textMessage.length < 28) {
                 if (key !== textLetter) {
                     textMessage += await getLetter(textLetter, textLetterLength);
                     textTime = Date.now();
@@ -180,23 +184,26 @@ while (true) {
                     console.log('New letter because of override.');
                 } else {
                     textLetterLength++;
-                    console.log('Repeated press.')
+                    console.log('Repeated press.');
                 }
                 console.log('textMessage Contents:', textMessage, 'Current letter #:', textLetterLength);
-                lcd.print('msg:'+textMessage)
+                textPrint('msg:'+textMessage);
             } else if (key === '*') {
                 textMessage = textMessage.slice(0, -1);
                 textReset();
-                lcd.print('msg:'+textMessage);
+                clear();
+                textPrint('msg:'+textMessage);
             } else if (key === '#') {
-                console.log('Message sent:', textMessage)
+                console.log('Message sent:', textMessage);
                 textReset();
                 textMessage = '';
+                clear();
                 lcd.print('msg:');
             } else if (key === 'B') {
                 textReset();
                 textMessage = '';
                 textMode = false;
+                lcd.clear();
                 lcd.print('Texting mode off');
                 await sleep(2000);
                 lcd.print('Passcode:');
@@ -258,10 +265,10 @@ while (true) {
         if (key == '#') action = 'Submitted.';
         if (key == '*') action = 'Deleted.';
         console.log('Action: '+String(action));
-    } else if (textMode && textTime && Date.now() - textTime >= 1000) {
+    } else if (textMode && textTime && (Date.now() - textTime >= 1000) && textMessage.length < 28) {
         textMessage += await getLetter(textLetter, textLetterLength);
         textReset();
-        lcd.print('msg:'+textMessage)
+        textPrint('msg:'+textMessage);
         console.log('Adding letter because of timeout.');
     }
     last = key;
