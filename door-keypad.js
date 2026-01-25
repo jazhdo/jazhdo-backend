@@ -129,7 +129,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 function getLetter(key, times) {
     if (!key || !times) return ''
     console.log('Adding', letters[key][times], 'to message.')
-    return letters[key][times % chars.length];
+    return letters[key][times % letters[key].length];
 }
 function textReset() {
     textTime = null;
