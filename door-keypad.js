@@ -161,6 +161,11 @@ while (true) {
         gpiox.set_gpio(cols[ci], 0);
         if (key) break;
     }
+    if ((!key || key == last) && textMode && Date.now() - textTime >= 1200) {
+        textMessage += getLetter(textLetter, textLetterLength);
+        textLetter = null;
+        console.log('Adding letter because of timeout.')
+    }
     if (key && key !== last) {
         if (textMode) {
             if (!isNaN(key) && Object.keys(letters).includes(key)) {
@@ -170,10 +175,6 @@ while (true) {
                     textLetterLength = 0;
                     textLetter = key
                     console.log('Next letter.');
-                } else if (Date.now() - textTime >= 1200) {
-                    textMessage += getLetter(textLetter, textLetterLength);
-                    textLetter = null;
-                    console.log('Adding letter because of timeout.')
                 } else {
                     textLetterLength++;
                     console.log('Repeated press.')
