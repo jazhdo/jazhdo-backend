@@ -143,9 +143,8 @@ function textReset() {
     textFlashStatus = false;
 }
 async function textFlash() {
-    const char = getLetter(textLetter, textLetterLength);
     const pos = textMessage.length + 4;
-    lcd.printLocation(pos, 0, char);
+    lcd.printLocation(pos, 0, getLetter(textLetter, textLetterLength));
     if (!textFlashStatus) return
     await sleep(500);
     if (!textFlashStatus) return
@@ -153,7 +152,7 @@ async function textFlash() {
     if (!textFlashStatus) return
     await sleep(500);
     if (!textFlashStatus) return
-    lcd.printLocation(pos, 0, char);
+    lcd.printLocation(pos, 0, getLetter(textLetter, textLetterLength));
 }
 
 lcd.print('Initial Code Completed');
