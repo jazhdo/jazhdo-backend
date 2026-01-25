@@ -1,6 +1,6 @@
 import i2c from 'i2c-bus';
 import LCD from 'lcd';
-import { Gpio } from 'pigpio';
+import gpiox from '@iiot2k/gpiox';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, getDoc, doc } from 'firebase/firestore';
 
@@ -28,15 +28,8 @@ const rows = [17, 27, 22, 23];
 const cols = [24, 25, 5, 6];
 const keys = [['1', '2', '3', 'A'], ['4', '5', '6', 'B'], ['7', '8', '9', 'C'], ['*', '0', '#', 'D']];
 
-const rowPins = rows.map(pin => new Gpio(pin, {
-    mode: Gpio.INPUT,
-    pullUpDown: Gpio.PUD_DOWN
-}));
-const colPins = cols.map(pin => {
-    const gpio = new Gpio(pin, { mode: Gpio.OUTPUT });
-    gpio.digitalWrite(0);
-    return gpio
-});
+rows.forEach(pin => { gpiox.init_gpio(pin, gpiox.GPIO_MODE_INPUT_PULLDOWN); });
+cols.forEach(pin => { gpiox.init_gpio(pin, gpiox.GPIO_MODE_OUTPUT, 0); });
 
 let value = '';
 let last = null;
@@ -50,8 +43,8 @@ lcd.clear();
 // lcd.setCursor(0, 1) // column 0, row 1
 
 process.on('SIGINT', () => {
-    rowPins.forEach(p => p.mpde(Gpio.INPUT));
-    colPins.forEach(p => p.mode(Gpio.INPUT));
+    rows.forEach(pin => gpiox.deinit_gpio(pin));
+    cols.forEach(pin => gpiox.deinit_gpio(pin));
     lcd.close();
     i2cBus.closeSync();
     process.exit();
@@ -60,10 +53,10 @@ process.on('SIGINT', () => {
 while (true) {
     let key = null;
     for (let ci = 0; ci < cols.length; ci++) {
-        colPins[ci].digitalWrite(1);
+        gpiox.set_gpio(cols[ci], 1);
         await sleep(1);
-        for (let ri = 0; ri < rows.length; ri++) { if (rowPins[ri].digitalRead() === 1) { key = keys[ri][ci]; break } }
-        colPins[ci].digitalWrite(0);
+        for (let ri = 0; ri < rows.length; ri++) { if (gpiox.get_gpio(rows[ri]) === 1) { key = keys[ri][ci]; break } }
+        gpiox.set_gpio(cols[ci], 0);
         if (key) break
     }
     if (key && key !== last) {
