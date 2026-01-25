@@ -15,18 +15,33 @@ class LCD {
     }
     
     init() {
-        this.write4bits(0x03 << 4);
-        this.delayMicroseconds(4500);
-        this.write4bits(0x03 << 4);
-        this.delayMicroseconds(4500);
-        this.write4bits(0x03 << 4);
-        this.delayMicroseconds(150);
-        this.write4bits(0x02 << 4);
-        
-        this.command(0x28); // 4-bit, 2 line, 5x8
-        this.command(0x0C); // Display on, cursor off
-        this.command(0x06); // Entry mode
-        this.clear();
+        console.log('Starting init...');
+        try {
+            console.log('Step 1');
+            this.write4bits(0x03 << 4);
+            this.delayMicroseconds(4500);
+            
+            console.log('Step 2');
+            this.write4bits(0x03 << 4);
+            this.delayMicroseconds(4500);
+            
+            console.log('Step 3');
+            this.write4bits(0x03 << 4);
+            this.delayMicroseconds(150);
+            
+            console.log('Step 4');
+            this.write4bits(0x02 << 4);
+            
+            console.log('Step 5 - sending commands');
+            this.command(0x28);
+            this.command(0x0C);
+            this.command(0x06);
+            this.clear();
+            console.log('Init complete!');
+        } catch (error) {
+            console.error('Init failed at:', error);
+            throw error;
+        }
     }
     
     clear() {
