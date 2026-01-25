@@ -116,7 +116,7 @@ let last = null;
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 lcd.print('Initial Code Completed');
-console.log('Initial Code Completed');
+console.log('Init Code Done');
 await sleep(1000);
 lcd.clear();
 // lcd.setCursor(0, 1) // column 0, row 1
@@ -125,7 +125,6 @@ process.on('SIGINT', () => {
     rows.forEach(pin => gpiox.deinit_gpio(pin));
     cols.forEach(pin => gpiox.deinit_gpio(pin));
     lcd.close();
-    i2cBus.closeSync();
     process.exit();
 })
 
@@ -138,6 +137,7 @@ while (true) {
         gpiox.set_gpio(cols[ci], 0);
         if (key) break
     }
+    console.log(key, last)
     if (key && key !== last) {
         switch (key) {
             case '#':
