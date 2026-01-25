@@ -128,31 +128,16 @@ let textTime = null;
 let textMessage = '';
 let textLetterLength = 0;
 let textLetter = '';
-let textFlashStatus = false;
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 function getLetter(key, times) {
     if (!key) return ''
-    console.log('Adding', letters[key][times], 'to message.')
     return letters[key][times % letters[key].length];
 }
 function textReset() {
     textTime = null;
     textLetterLength = 0;
     textLetter = '';
-    textFlashStatus = false;
-}
-async function textFlash() {
-    const pos = textMessage.length + 4;
-    lcd.printLocation(pos, 0, getLetter(textLetter, textLetterLength));
-    if (!textFlashStatus) return
-    await sleep(500);
-    if (!textFlashStatus) return
-    lcd.printLocation(pos, 0, ' ');
-    if (!textFlashStatus) return
-    await sleep(500);
-    if (!textFlashStatus) return
-    lcd.printLocation(pos, 0, getLetter(textLetter, textLetterLength));
 }
 
 lcd.print('Initial Code Completed');
@@ -192,9 +177,7 @@ while (true) {
                     textTime = Date.now();
                     textLetterLength = 0;
                     textLetter = key;
-                    console.log('Next letter.');
-                    textFlashStatus = true;
-                    textFlash();
+                    console.log('New letter because of override.');
                 } else {
                     textLetterLength++;
                     console.log('Repeated press.')
