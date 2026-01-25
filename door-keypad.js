@@ -102,6 +102,7 @@ const keys = [
     ['*', '0', '#', 'D']
 ];
 const letters = {
+    0: ' ',
     2: ['a', 'b', 'c'],
     3: ['d', 'e', 'f'],
     4: ['g', 'h', 'i'],
@@ -122,14 +123,32 @@ let textTime = null;
 let textMessage = '';
 let textLetterLength = 0;
 let textLetter = '';
+let textFlash = false;
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 function getLetter(key, times) {
     if (!key || !times) return ''
+    if (key === 0) return ' '
     if (((key === 7 || key === 9) && times > 4)) { times = times%4; }
     else if ((key !== 7 && key !== 9) && times > 3) { times = times%3; }
     console.log('Adding', letters[key][times], 'to message.')
     return letters[key][times]
+}
+function textReset() {
+    textTime = null;
+    textLetterLength = 0;
+    textLetter = '';
+    textFlashStatus = false;
+}
+async function textFlash() {
+    while (textFlashStatus) {
+        lcd.clear();
+        lcd.print('msg: '+textMessage.slice(0, -1));
+        await sleep(500);
+        lcd.clear();
+        lcd.print('msg: '+textMessage);
+        await sleep(500);
+    }
 }
 
 lcd.print('Initial Code Completed');
@@ -170,6 +189,7 @@ while (true) {
                     textLetterLength = 0;
                     textLetter = key
                     console.log('Next letter.');
+                    textFlash();
                 } else {
                     textLetterLength++;
                     console.log('Repeated press.')
@@ -179,18 +199,18 @@ while (true) {
                 lcd.print('msg: '+textMessage)
             } else if (key === '*') {
                 textMessage = textMessage.slice(0, -1);
+                textReset();
                 lcd.clear();
                 lcd.print('msg: '+textMessage);
             } else if (key === '#') {
                 console.log('Message sent:', textMessage)
+                textReset();
                 lcd.clear();
                 textMessage = '';
                 lcd.print('msg:');
             } else if (key === 'B') {
-                textTime = null;
+                textReset();
                 textMessage = '';
-                textLetterLength = 0;
-                textLetter = '';
                 lcd.clear();
                 textMode = false;
                 lcd.print('Texting mode off');
@@ -231,14 +251,14 @@ while (true) {
                 case '*':
                     value = value.slice(0, -1);
                     lcd.clear();
-                    lcd.print('Passcode:', value);
+                    lcd.print('Passcode: '+value);
                     break;
                 case 'A':
                     lcd.clear();
                     lcd.print('Locking...');
                     await sleep(3000)
                     lcd.clear();
-                    lcd.print('Passcode:', value);
+                    lcd.print('Passcode: '+value);
                     break;
                 case 'B':
                     value = '';
@@ -253,7 +273,7 @@ while (true) {
                     if (!isNaN(key) && value.length < 6) {
                         value += key;
                         lcd.clear();
-                        lcd.print('Passcode:', value);
+                        lcd.print('Passcode: '+value);
                     }
                     break;
             }
@@ -264,9 +284,7 @@ while (true) {
         console.log('Action: '+String(action));
     } else if (textMode && textTime && Date.now() - textTime >= 1000) {
         textMessage += getLetter(textLetter, textLetterLength);
-        textTime = null;
-        textLetterLength = 0;
-        textLetter = '';
+        textReset();
         console.log('Adding letter because of timeout.');
     }
     last = key;
