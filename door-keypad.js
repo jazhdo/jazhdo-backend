@@ -161,11 +161,6 @@ while (true) {
         gpiox.set_gpio(cols[ci], 0);
         if (key) break;
     }
-    if ((!key || key == last) && textMode && Date.now() - textTime >= 1200) {
-        textMessage += getLetter(textLetter, textLetterLength);
-        textLetter = null;
-        console.log('Adding letter because of timeout.')
-    }
     if (key && key !== last) {
         if (textMode) {
             if (!isNaN(key) && Object.keys(letters).includes(key)) {
@@ -267,6 +262,12 @@ while (true) {
         if (key == '#') action = 'Submitted.';
         if (key == '*') action = 'Deleted.';
         console.log('Action: '+String(action));
+    } else if (textMode && textTime && Date.now() - textTime >= 1000) {
+        textMessage += getLetter(textLetter, textLetterLength);
+        textTime = null;
+        textLetterLength = 0;
+        textLetter = '';
+        console.log('Adding letter because of timeout.');
     }
     last = key;
     await sleep(50);
