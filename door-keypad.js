@@ -194,7 +194,8 @@ while (true) {
                 break;
             default:
                 if (!isNaN(key) && value.length < 6) {
-                    value += keylcd.clear();
+                    value += key;
+                    lcd.clear();
                     lcd.print(value);
                 }
                 break;
