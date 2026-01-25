@@ -44,6 +44,11 @@ class LCD {
         for (let i = 0; i < truncated.length; i++) this.sendData(truncated.charCodeAt(i));
     }
     
+    printLocation(col, row, char) {
+        this.command(0x80 | (col + [0x00, 0x40][row]));
+        this.sendData(char.charCodeAt(0));
+    }
+
     command(value) { this.send(value, 0) }
     sendData(value) { this.send(value, 1) }
     
@@ -138,18 +143,21 @@ function textReset() {
     textFlashStatus = false;
 }
 async function textFlash() {
-    if (textFlashStatus) {
-        lcd.print('msg: '+textMessage.slice(0, -1));
-        await sleep(500);
-        lcd.print('msg: '+textMessage);
-        await sleep(500);
-    }
+    lcd.printLocation(textMessage.length, 0, textLetter);
+    if (!textFlashStatus) return
+    await sleep(500);
+    if (!textFlashStatus) return
+    lcd.printLocation(textMessage.length, 0, '');
+    if (!textFlashStatus) return
+    await sleep(500);
+    if (!textFlashStatus) return
+    lcd.printLocation(textMessage.length, 0, textLetter);
 }
 
 lcd.print('Initial Code Completed');
 console.log('Init Code Done');
 await sleep(1000);
-lcd.clear();
+lcd.print('Passscode:')
 
 process.on('SIGINT', () => {
     rows.forEach(pin => gpiox.deinit_gpio(pin));
@@ -160,7 +168,6 @@ process.on('SIGINT', () => {
 
 while (true) {
     let key = null;
-    textFlash();
     for (let ci = 0; ci < cols.length; ci++) {
         gpiox.set_gpio(cols[ci], 1);
         await sleep(1);
@@ -183,35 +190,31 @@ while (true) {
                     textMessage += getLetter(textLetter, textLetterLength);
                     textTime = Date.now();
                     textLetterLength = 0;
-                    textLetter = key
+                    textLetter = key;
                     console.log('Next letter.');
                     textFlashStatus = true;
+                    textFlash();
                 } else {
                     textLetterLength++;
                     console.log('Repeated press.')
                 }
                 console.log('textMessage Contents:', textMessage, 'Current letter #:', textLetterLength);
-                lcd.clear();
-                lcd.print('msg: '+textMessage)
+                lcd.print('msg:'+textMessage)
             } else if (key === '*') {
                 textMessage = textMessage.slice(0, -1);
                 textReset();
-                lcd.clear();
-                lcd.print('msg: '+textMessage);
+                lcd.print('msg:'+textMessage);
             } else if (key === '#') {
                 console.log('Message sent:', textMessage)
                 textReset();
-                lcd.clear();
                 textMessage = '';
                 lcd.print('msg:');
             } else if (key === 'B') {
                 textReset();
                 textMessage = '';
-                lcd.clear();
                 textMode = false;
                 lcd.print('Texting mode off');
                 await sleep(2000);
-                lcd.clear();
                 lcd.print('Passcode:');
             }
         } else {
@@ -221,7 +224,6 @@ while (true) {
                     const prohibitedRef = doc(db, 'passcodes', 'prohibited');
                     const allowedSnap = await getDoc(allowedRef) || {};
                     const prohibitedSnap = await getDoc(prohibitedRef) || {};
-                    lcd.clear();
                     if (Object.values(prohibitedSnap.data()).includes(value)) {
                         lcd.print('Prohibited.');
                         console.log('Prohibited passcode', value, 'entered.');
@@ -241,35 +243,28 @@ while (true) {
                             await sleep(3000);
                         }
                     }
-                    lcd.clear();
                     lcd.print('Passcode:');
                     value = '';
                     break;
                 case '*':
                     value = value.slice(0, -1);
-                    lcd.clear();
                     lcd.print('Passcode: '+value);
                     break;
                 case 'A':
-                    lcd.clear();
                     lcd.print('Locking...');
                     await sleep(3000)
-                    lcd.clear();
                     lcd.print('Passcode: '+value);
                     break;
                 case 'B':
                     value = '';
-                    lcd.clear();
                     textMode = true;
                     lcd.print('Texting mode on.');
                     await sleep(2000);
-                    lcd.clear();
                     lcd.print('msg:');
                     break;
                 default:
                     if (!isNaN(key) && value.length < 6) {
                         value += key;
-                        lcd.clear();
                         lcd.print('Passcode: '+value);
                     }
                     break;
