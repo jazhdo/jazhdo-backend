@@ -1,5 +1,4 @@
 import i2c from 'i2c-bus';
-// import LCD from 'lcd';
 import gpiox from '@iiot2k/gpiox';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, getDoc, doc } from 'firebase/firestore';
@@ -36,26 +35,17 @@ class LCD {
     
     print(text, lineNumber) {
         if (!lineNumber) { lineNumber = 1 }
-        if (lineNumber < 1 || lineNumber > this.rows) {
-            throw new Error(`Invalid line number. Must be 1-${this.rows}`);
-        }
+        if (lineNumber < 1 || lineNumber > this.rows) throw new Error(`Invalid line number. Must be 1-${this.rows}`);
         
         const rowOffsets = [0x00, 0x40];
         this.command(0x80 | rowOffsets[lineNumber - 1]);
         
         const truncated = text.slice(0, this.cols).padEnd(this.cols, ' ');
-        for (let i = 0; i < truncated.length; i++) {
-            this.sendData(truncated.charCodeAt(i));
-        }
+        for (let i = 0; i < truncated.length; i++) this.sendData(truncated.charCodeAt(i));
     }
     
-    command(value) {
-        this.send(value, 0);
-    }
-    
-    sendData(value) {
-        this.send(value, 1);
-    }
+    command(value) { this.send(value, 0) }
+    sendData(value) { this.send(value, 1) }
     
     send(value, mode) {
         const highNibble = value & 0xF0;
@@ -105,21 +95,45 @@ lcd.init();
 // Keypad config (GPIOs)
 const rows = [17, 27, 22, 23];
 const cols = [24, 25, 5, 6];
-const keys = [['1', '2', '3', 'A'], ['4', '5', '6', 'B'], ['7', '8', '9', 'C'], ['*', '0', '#', 'D']];
+const keys = [
+    ['1', '2', '3', 'A'],
+    ['4', '5', '6', 'B'],
+    ['7', '8', '9', 'C'],
+    ['*', '0', '#', 'D']
+];
+const letters = {
+    2: ['a', 'b', 'c'],
+    3: ['d', 'e', 'f'],
+    4: ['g', 'h', 'i'],
+    5: ['j', 'k', 'l'],
+    6: ['m', 'n', 'o'],
+    7: ['p', 'q', 'r', 's'],
+    8: ['t', 'u', 'v'],
+    9: ['w', 'x', 'y', 'z']
+};
 
 rows.forEach(pin => { gpiox.init_gpio(pin, gpiox.GPIO_MODE_INPUT_PULLDOWN, 0); });
 cols.forEach(pin => { gpiox.init_gpio(pin, gpiox.GPIO_MODE_OUTPUT, 0); });
 
 let value = '';
 let last = null;
+let textMode = false;
+let textTime = null;
+let textMessage = '';
+let textLetterLength = 0;
+let textLetter = '';
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+function getLetter(key, times) {
+    if (((key === 7 || key === 9) && times > 4)) { times = times%4; }
+    else if ((key !== 7 && key !== 9) && times > 3) { times = times%3; }
+    return letters[key][times]
+}
 
 lcd.print('Initial Code Completed');
 console.log('Init Code Done');
 await sleep(1000);
 lcd.clear();
-// lcd.setCursor(0, 1) // column 0, row 1
 
 process.on('SIGINT', () => {
     rows.forEach(pin => gpiox.deinit_gpio(pin));
@@ -146,62 +160,102 @@ while (true) {
         if (key) break;
     }
     if (key && key !== last) {
-        switch (key) {
-            case '#':
-                const allowedRef = doc(db, 'passcodes', 'allowed');
-                const prohibitedRef = doc(db, 'passcodes', 'prohibited');
-
-                const allowedSnap = await getDoc(allowedRef) || {};
-                const prohibitedSnap = await getDoc(prohibitedRef) || {};
-
-                lcd.clear();
-                if (Object.values(prohibitedSnap.data()).includes(value)) {
-                    lcd.print('Prohibited.');
-                    console.log('Prohibited passcode', value, 'entered.');
-                    await sleep(2000);
-                } else if (Object.values(allowedSnap.data()).includes(value)) {
-                    lcd.print('Unlocking...');
-                    console.log('Door unlocked.');
-                    await sleep(3000);
-                } else {
-                    if (value.length == 6) {
-                        lcd.print('Incorrect.');
-                        console.log('Incorrect passcode', value, 'entered.');
-                        await sleep(2000);
-                    } else {
-                        lcd.print('6 digits only.');
-                        console.log('Incomplete passcode entered.');
-                        await sleep(3000);
-                    }
+        if (textMode) {
+            if (!isNaN(key) && Object.keys(letters).includes(key)) {
+                if (key !== textLetter) {
+                    textMessage += getLetter(textLetter, textLetterLength);
+                    textTime = Date().now();
+                    textLetterLength = 1;
+                    textLetter = key
+                } else if (Date().now() - textTime >= 1200) {
+                    textMessage += getLetter(textLetter, textLetterLength);
                 }
                 lcd.clear();
-                value = '';
-                break;
-            case '*':
-                value = value.slice(0, -1);
+                lcd.print('msg:', textMessage)
+            } else if (key === '*') {
+                textMessage = textMessage.slice(0, -1);
                 lcd.clear();
-                lcd.print(value);
-                break;
-            case 'A':
+                lcd.print('msg:', textMessage);
+            } else if (key === '#') {
+                console.log('Message sent:', textMessage)
                 lcd.clear();
-                lcd.print('Locking...');
-                await sleep(3000)
+                textMessage = '';
+                lcd.print('msg:');
+            } else if (key === 'B') {
+                textTime = null;
+                textMessage = '';
+                textLetterLength = 0;
+                textLetter = '';
                 lcd.clear();
-                break;
-            default:
-                if (!isNaN(key) && value.length < 6) {
-                    value += key;
+                textMode = false;
+                lcd.print('Texting mode off');
+                await sleep(2000);
+                lcd.clear();
+                lcd.print('Passcode:');
+            }
+        } else {
+            switch (key) {
+                case '#':
+                    const allowedRef = doc(db, 'passcodes', 'allowed');
+                    const prohibitedRef = doc(db, 'passcodes', 'prohibited');
+                    const allowedSnap = await getDoc(allowedRef) || {};
+                    const prohibitedSnap = await getDoc(prohibitedRef) || {};
                     lcd.clear();
-                    lcd.print(value);
-                }
-                break;
+                    if (Object.values(prohibitedSnap.data()).includes(value)) {
+                        lcd.print('Prohibited.');
+                        console.log('Prohibited passcode', value, 'entered.');
+                        await sleep(2000);
+                    } else if (Object.values(allowedSnap.data()).includes(value)) {
+                        lcd.print('Unlocking...');
+                        console.log('Door unlocked.');
+                        await sleep(3000);
+                    } else {
+                        if (value.length == 6) {
+                            lcd.print('Incorrect.');
+                            console.log('Incorrect passcode', value, 'entered.');
+                            await sleep(2000);
+                        } else {
+                            lcd.print('6 digits only.');
+                            console.log('Incomplete passcode entered.');
+                            await sleep(3000);
+                        }
+                    }
+                    lcd.clear();
+                    value = '';
+                    break;
+                case '*':
+                    value = value.slice(0, -1);
+                    lcd.clear();
+                    lcd.print('Passcode:', value);
+                    break;
+                case 'A':
+                    lcd.clear();
+                    lcd.print('Locking...');
+                    await sleep(3000)
+                    lcd.clear();
+                    lcd.print('Passcode:', value);
+                    break;
+                case 'B':
+                    value = '';
+                    lcd.clear();
+                    textMode = true;
+                    lcd.print('Texting mode on.');
+                    await sleep(2000);
+                    lcd.clear();
+                    lcd.print('msg:');
+                    break;
+                default:
+                    if (!isNaN(key) && value.length < 6) {
+                        value += key;
+                        lcd.clear();
+                        lcd.print('Passcode:', value);
+                    }
+                    break;
+            }
         }
         let action = key + ' pressed';
-        if (key == '#') {
-            action = 'Submitted.';
-        } else if (key == '*') {
-            action = 'Deleted.';
-        }
+        if (key == '#') action = 'Submitted.';
+        if (key == '*') action = 'Deleted.';
         console.log('Action: '+String(action));
     }
     last = key;
