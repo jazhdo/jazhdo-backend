@@ -1,7 +1,7 @@
 import i2c from 'i2c-bus';
 import gpiox from '@iiot2k/gpiox';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, getDoc, doc } from 'firebase/firestore';
+import { getFirestore, getDoc, doc, addDoc, collection } from 'firebase/firestore';
 
 // Replacement LCD library written by claude
 class LCD {
@@ -194,10 +194,16 @@ while (true) {
                 lcd.clear();
                 textPrint('msg:'+textMessage);
             } else if (key === '#') {
+                await addDoc(collection(db, "messages"), {
+                    contactMethod: 'Door lock',
+                    message: textMessage, 
+                    createdAt: new Date()
+                });
                 console.log('Message sent:', textMessage);
                 textReset();
                 textMessage = '';
                 lcd.clear();
+                lcd.print('Message Sent.');
                 lcd.print('msg:');
             } else if (key === 'B') {
                 textReset();
