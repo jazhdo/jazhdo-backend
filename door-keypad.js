@@ -102,7 +102,7 @@ const keys = [
     ['*', '0', '#', 'D']
 ];
 const letters = {
-    0: ' ',
+    0: [' '],
     2: ['a', 'b', 'c'],
     3: ['d', 'e', 'f'],
     4: ['g', 'h', 'i'],
@@ -128,11 +128,8 @@ let textFlashStatus = false;
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 function getLetter(key, times) {
     if (!key || !times) return ''
-    if (key === 0) return ' '
-    if (((key === 7 || key === 9) && times > 4)) { times = times%4; }
-    else if ((key !== 7 && key !== 9) && times > 3) { times = times%3; }
     console.log('Adding', letters[key][times], 'to message.')
-    return letters[key][times]
+    return letters[key][times % chars.length];
 }
 function textReset() {
     textTime = null;
@@ -141,7 +138,7 @@ function textReset() {
     textFlashStatus = false;
 }
 async function textFlash() {
-    while (textFlashStatus) {
+    if (textFlashStatus) {
         lcd.clear();
         lcd.print('msg: '+textMessage.slice(0, -1));
         await sleep(500);
@@ -165,6 +162,7 @@ process.on('SIGINT', () => {
 
 while (true) {
     let key = null;
+    textFlash();
     for (let ci = 0; ci < cols.length; ci++) {
         gpiox.set_gpio(cols[ci], 1);
         await sleep(1);
@@ -189,7 +187,7 @@ while (true) {
                     textLetterLength = 0;
                     textLetter = key
                     console.log('Next letter.');
-                    textFlash();
+                    textFlashStatus = true;
                 } else {
                     textLetterLength++;
                     console.log('Repeated press.')
