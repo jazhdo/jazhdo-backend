@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import UAParser from 'ua-parser-js';
+import { UAParser } from 'ua-parser-js';
 import dotenv from 'dotenv';
 
 // const express = require('express');
