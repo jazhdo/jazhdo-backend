@@ -3,7 +3,7 @@ import gpiox from '@iiot2k/gpiox';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, getDoc, doc, addDoc, collection } from 'firebase/firestore';
 
-// Replacement LCD library written by claude
+// Replacement LCD library written by claude.ai
 class LCD {
     constructor(bus = 1, address = 0x27, cols = 16, rows = 2) {
         this.bus = i2c.openSync(bus);
@@ -211,7 +211,7 @@ while (true) {
                 textMode = false;
                 lcd.clear();
                 lcd.print('Texting mode off');
-                await sleep(2000);
+                await sleep(1000);
                 lcd.print('Passcode:');
             }
         } else {
@@ -256,7 +256,7 @@ while (true) {
                     value = '';
                     textMode = true;
                     lcd.print('Texting mode on.');
-                    await sleep(2000);
+                    await sleep(1000);
                     lcd.print('msg:');
                     break;
                 default:
