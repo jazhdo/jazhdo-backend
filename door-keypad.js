@@ -96,7 +96,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let lcd;
-for (let i = 0; i <= 14; i++) { if (fs.existsSync(`/dev/i2c-${i}`) || fs.existsSync(`/dev/i2c${i}`)) { lcd = new LCD(i); console.log(`LCD using bus ${i}`)} };
+for (let i = 0; i <= 14; i++) { if (fs.existsSync(`/dev/i2c-${i}`) || fs.existsSync(`/dev/i2c${i}`)) { lcd = new LCD(i); console.log(`LCD using bus ${i}`); return} };
 lcd.init();
 
 // Keypad config (GPIOs)
