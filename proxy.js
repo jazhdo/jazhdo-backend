@@ -20,7 +20,9 @@ const server = http.createServer((req, res) => {
 		return;
 	}
 	console.log(`Proxying request to: ${targetUrl}`);
-	proxy.web(req, res, { target: targetUrl, changeOrigin: true});
+	const parsed = new URL(targetUrl);
+	req.url = parsed.pathname + parsed.search;
+	proxy.web(req, res, { target: `${parsed.protocol}//${parsed.host}`, changeOrigin: true});
 });
 
 server.listen(3002, () => {
