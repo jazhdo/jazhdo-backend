@@ -1,13 +1,21 @@
 import http from 'http';
 import httpProxy from 'http-proxy';
 
+async function active(url) {
+    if (!url) return false
+    try {
+        const response = await fetch(url);
+        return response.ok
+    } catch { return false }
+}
+
 const proxy = httpProxy.createProxyServer({});
 const targetMap = {
     '/camera': 'http://localhost:3001',
     '/proxy': 'http://localhost:3002'
 };
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
     let target = null;
 
     for (const path in targetMap) {
@@ -16,13 +24,20 @@ const server = http.createServer((req, res) => {
             break;
         }
     }
-
-    if (target) {
-        console.log(`Sending ${req.url} to ${target}`);
-        proxy.web(req, res, { target });
+    let status = await active(target);
+    if (status) {
+        if (target) {
+            console.log(`Sending ${req.url} to ${target}`);
+            proxy.web(req, res, { target });
+        } else {
+            console.log(`Unable to send ${req.url} to ${target}`);
+            res.statusCode = 404;
+            res.end();
+        }
     } else {
-        console.log(`Unable to send ${req.url} to ${target}`);
-        res.end('Error 404');
+        console.log(`Unable to send ${req.url} to offline server ${target}`);
+        res.statusCode = 503;
+        res.end();
     }
 });
 
