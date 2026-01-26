@@ -115,7 +115,7 @@ function stopRecording(inputFPS) {
                 errorsList += inputFPS ? '' : `the input FPS was invalid: ${inputFPS}`;
                 errorsList?.forEach((e) => {errorsMessage += `\n${e}`});
                 if (!errorsList) errorsMessage = '\nno errors';
-                console.log('Conversion not done because of the errors:', errorsMessgae);
+                console.log('Conversion not done because of the errors:', errorsMessage);
             }
         });
         currentRecordingStream.destroy();
@@ -193,6 +193,14 @@ app.get('/camera/stream', (req, res) => {
         let frameBuffer = Buffer.alloc(0);
         let recordingStream = null;
 
+        stream.stderr.on('data', data => {
+            console.log('rpicam-vid says on stderr:', data.toStrin());
+        });
+
+        stream.on('close', (code) => {
+            console.log('rpicam-vid stream closed with code:', code)
+        })
+
         stream.on('error', (err) => {
             console.error('Stream error:', err);
             res.end();
@@ -213,7 +221,7 @@ app.get('/camera/stream', (req, res) => {
             while (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
                 const frame = frameBuffer.slice(startIdx, endIdx + 2);
                 
-                res.write('--FRAME\r\nContent-Type: image/jpeg\r\nContent-Length: ${frame.length}\r\n\r\n');
+                res.write(`--FRAME\r\nContent-Type: image/jpeg\r\nContent-Length: ${frame.length}\r\n\r\n`);
                 res.write(frame);
                 res.write('\r\n');
 
@@ -256,7 +264,7 @@ app.post('/camera/record/stop', authenticateToken, (req, res) => {
     if (filename) {
         res.status(201).json({
             message: 'Recording stopped.',
-            fps: headerFPS?'60':headerFPS + '.',
+            fps: headerFPS?headerFPS:'60',
             filename: path.basename(filename)
         });
     } else { res.status(404).json({ message: 'Error stopping undefined recording' }); }
