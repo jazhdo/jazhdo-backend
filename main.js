@@ -5,6 +5,7 @@ async function active(url) {
     if (!url) return false
     try {
         const response = await fetch(url);
+        console.log('response:', response)
         return response.ok
     } catch { return false }
 }
@@ -27,6 +28,7 @@ const server = http.createServer(async (req, res) => {
     
     if (target) {
         let status = await active(target);
+        console.log('active check has returned', status);
         if (status) {
             console.log(`Sending ${req.url} to ${target}`);
             proxy.web(req, res, { target });
