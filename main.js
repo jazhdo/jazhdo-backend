@@ -24,21 +24,23 @@ const server = http.createServer(async (req, res) => {
             break;
         }
     }
-    let status = await active(target);
-    if (status) {
-        if (target) {
+    
+    if (target) {
+        let status = await active(target);
+        if (status) {
             console.log(`Sending ${req.url} to ${target}`);
             proxy.web(req, res, { target });
         } else {
-            console.log(`Unable to send ${req.url} to ${target}`);
-            res.statusCode = 404;
+            console.log(`Unable to send ${req.url} to offline server ${target}`);
+            res.statusCode = 503;
             res.end();
         }
     } else {
-        console.log(`Unable to send ${req.url} to offline server ${target}`);
-        res.statusCode = 503;
+        console.log(`Unable to send ${req.url} to nonexistant server`);
+        res.statusCode = 404;
         res.end();
     }
+
 });
 
 server.listen(3000, '0.0.0.0', () => {
