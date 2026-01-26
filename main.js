@@ -22,7 +22,7 @@ const server = http.createServer(async (req, res) => {
 
     for (const path in targetMap) {
         if (req.url.startsWith(path)) {
-            status = await active(path);
+            status = await active(targetMap[path]);
             target = targetMap[path];
             break;
         }
