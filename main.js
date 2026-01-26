@@ -21,6 +21,7 @@ const server = http.createServer((req, res) => {
         console.log(`Sending ${req.url} to ${target}`);
         proxy.web(req, res, { target });
     } else {
+        console.log(`Unable to send ${req.url} to ${target}`);
         res.end('Error 404');
     }
 });

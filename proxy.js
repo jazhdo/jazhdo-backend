@@ -1,10 +1,9 @@
 const http = require('http');
 const httpProxy = require('http-proxy');
 const proxy = httpProxy.createProxyServer({});
-const port = 3000;
 
 proxy.on('error', (err, req, res) => {
-	console.error('Proxy error:', err);
+	console.error('Proxy error:\n', err);
 	res.writeHead(500, {
 		'Content-Type': 'text/plain'
 	});
@@ -23,7 +22,7 @@ const server = http.createServer((req, res) => {
 	proxy.web(req, res, { target: targetUrl, changeOrigin: true});
 });
 
-server.listen(port, () => {
-	console.log(`Proxy server is running on http://localhost:${port}`);
-	console.log(`Access websites via this proxy (e.g., http://localhost:${port})`);
+server.listen(3002, () => {
+    console.log(`Starting server...`);
+    console.log(`Access at http://[RPI_IP_ADDRESS]:3000/proxy/\nMore information can be found at https://github.com/jazhdo/jazhdo-backend/wiki`);
 });
