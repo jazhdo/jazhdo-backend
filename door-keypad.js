@@ -1,5 +1,6 @@
 import i2c from 'i2c-bus';
 import gpiox from '@iiot2k/gpiox';
+import fs from 'fs';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, getDoc, doc, addDoc, collection } from 'firebase/firestore';
 
@@ -94,7 +95,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const lcd = new LCD(1, 0x27, 16, 2);
+let lcd;
+for (let i = 0; i <= 14; i++) { if (fs.existsSync(`/dev/i2c-${i}`) || fs.existsSync(`/dev/i2c${i}`)) lcd = new LCD(i); };
 lcd.init();
 
 // Keypad config (GPIOs)
