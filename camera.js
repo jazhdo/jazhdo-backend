@@ -194,7 +194,7 @@ app.get('/camera/stream', (req, res) => {
         let recordingStream = null;
 
         stream.stderr.on('data', data => {
-            console.log('rpicam-vid says on stderr:', data.toStrin());
+            console.log('rpicam-vid says on stderr:', data.toString());
         });
 
         stream.on('close', (code) => {
