@@ -120,7 +120,7 @@ function stopRecording(inputFPS) {
 app.get('/camera/health', (req, res) => {
     const parser = new UAParser(req.headers['user-agent']);
     res.status(200).json({
-        ip: req.ip.split(':').pop(),
+        ip: req.ip,
         userAgent: parser.getResult(),
         timestamp: new Date().toISOString()
     });
