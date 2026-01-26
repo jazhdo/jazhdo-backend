@@ -13,9 +13,9 @@ proxy.on('error', (err, req, res) => {
 
 const server = http.createServer((req, res) => {
 	const targetUrl = req.url.slice(1);
-
 	if (!targetUrl.startsWith('http')) {
 		res.writeHead(400, { 'Content-Type': 'text/plain' });
+		console.log('Error proxying request to:', targetUrl)
 		res.end('Please specify a valid target URL in the path (e.g., /https://example.com)');
 		return;
 	}
