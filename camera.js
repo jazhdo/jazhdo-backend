@@ -7,15 +7,6 @@ import path from 'path';
 import { UAParser } from 'ua-parser-js';
 import dotenv from 'dotenv';
 
-// const express = require('express');
-// const cors = require('cors');
-// const jwt = require('jsonwebtoken');
-// const { spawn } = require('child_process');
-// const fs = require('fs');
-// const path = require('path');
-// const UAParser = require('ua-parser-js');
-// const fsPromises = require('fs').promises;
-
 const app = express();
 const RECORDINGS_DIR = './camera-recordings';
 const CAMERA_CONFIG = {
@@ -94,7 +85,6 @@ function stopRecording(inputFPS) {
                 
                 ffmpeg.stdout.on('data', () => {}); 
                 ffmpeg.stderr.on('data', (data) => { console.log('ffmpeg says:\n', data.toString()) });
-                // ffmpeg.stderr.on('data', (data) => { console.log('ffmpeg:', data.toString()); });
                 
                 ffmpeg.on('exit', (code) => {
                     if (code === 0) {
@@ -110,11 +100,11 @@ function stopRecording(inputFPS) {
             } else {
                 let errorsMessage = '';
                 let errorsList = [];
-                errorsList += oldFile ? '' : `input pathname doesn't exist: ${oldFile}`;
-                errorsList += fs.existsSync(oldFile) ? '' : `fs doesn't have a sync with file ${oldFile}`;
-                errorsList += inputFPS ? '' : `the input FPS was invalid: ${inputFPS}`;
-                errorsList?.forEach((e) => {errorsMessage += `\n${e}`});
-                if (!errorsList) errorsMessage = '\nno errors';
+                if (!oldFile) errorsList.push(`input pathname doesn't exist: ${oldFile}`);
+                if (!fs.existsSync(oldFile)) errorsList.push(`fs doesn't have a sync with file ${oldFile}`);
+                if (!inputFPS) errorsList.push(`the input FPS was invalid: ${inputFPS}`);
+                if (errorsList) errorsList.forEach((e) => {errorsMessage += `\n${e}`})
+                else errorsMessage = '\nno errors';
                 console.log('Conversion not done because of the errors:', errorsMessage);
             }
         });
@@ -173,7 +163,6 @@ app.get('/camera/stream', (req, res) => {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
             'Expires': '0',
-            'Connection': 'close',
             'X-Accel-Buffering': 'no'
         });
 
@@ -185,6 +174,7 @@ app.get('/camera/stream', (req, res) => {
             '--framerate', fpsToUse,
             '--codec', 'mjpeg',
             '--inline',
+            '-n',
             '-o', '-'
         ]);
         
@@ -193,14 +183,8 @@ app.get('/camera/stream', (req, res) => {
         let frameBuffer = Buffer.alloc(0);
         let recordingStream = null;
 
-        stream.stderr.on('data', data => {
-            console.log('rpicam-vid says on stderr:', data.toString());
-        });
-
-        stream.on('close', (code) => {
-            console.log('rpicam-vid stream closed with code:', code)
-        })
-
+        stream.stderr.on('data', data => { console.log('rpicam-vid says on stderr:\n', data.toString()) });
+        stream.on('close', code => { console.log('rpicam-vid stream closed (Code '+code+')') })
         stream.on('error', (err) => {
             console.error('Stream error:', err);
             res.end();
@@ -264,7 +248,7 @@ app.post('/camera/record/stop', authenticateToken, (req, res) => {
     if (filename) {
         res.status(201).json({
             message: 'Recording stopped.',
-            fps: headerFPS?headerFPS:'60',
+            fps: headerFPS || '60',
             filename: path.basename(filename)
         });
     } else { res.status(404).json({ message: 'Error stopping undefined recording' }); }
