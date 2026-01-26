@@ -148,7 +148,7 @@ function textPrint(text) {
 lcd.print('Initial Code Completed');
 console.log('Init Code Done');
 await sleep(1000);
-lcd.print('Passscode:')
+lcd.print('Passcode:');
 
 process.on('SIGINT', () => {
     rows.forEach(pin => gpiox.deinit_gpio(pin));

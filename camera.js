@@ -284,13 +284,13 @@ app.get('/camera/record/get/:filename', authenticateToken, (req, res) => {
     const filename = req.params.filename;
     const filePath = path.join(RECORDINGS_DIR, filename);
 
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'Error file not found' });
+    if (!fs.existsSync(filePath)) return res.status(404).json({ mee5ssage: 'Error file not found' });
 
     res.download(filePath);
 });
 
 // Start server
-app.listen(3001, () => {
+const server = app.listen(3001, () => {
     console.log(`Starting server...`);
     console.log(`Access at http://[RPI_IP_ADDRESS]:3000/camera/\nMore information can be found at https://github.com/jazhdo/jazhdo-backend/wiki`);
 });
@@ -298,5 +298,6 @@ app.listen(3001, () => {
 // Cleanup on exit
 process.on('SIGINT', () => {
     console.log('\nShutting down...');
+    server.close();
     process.exit();
 });
