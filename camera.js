@@ -1,10 +1,20 @@
-const express = require('express');
-const cors = require('cors');
-const jwt = require('jsonwebtoken');
-const { spawn } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const UAParser = require('ua-parser-js');
+import express from 'express';
+import cors from 'cors';
+import jwt from 'jsonwebtoken';
+import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import UAParser from 'ua-parser-js';
+import dotenv from 'dotenv';
+
+// const express = require('express');
+// const cors = require('cors');
+// const jwt = require('jsonwebtoken');
+// const { spawn } = require('child_process');
+// const fs = require('fs');
+// const path = require('path');
+// const UAParser = require('ua-parser-js');
+// const fsPromises = require('fs').promises;
 
 const app = express();
 const RECORDINGS_DIR = './camera-recordings';
@@ -16,7 +26,7 @@ const CAMERA_CONFIG = {
 };
 
 // Access config
-require('dotenv').config({ path: './.env.local' });
+dotenv.config({ path: './.env.local' });
 const ADMIN_USERNAME = process.env.USERNAME;
 const ADMIN_PASSWORD = process.env.PASSWORD;
 const SECRET_KEY = process.env.KEY;
@@ -31,7 +41,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-const fsPromises = require('fs').promises;
+const fsPromises = fs.promises;
 fsPromises.mkdir(RECORDINGS_DIR, { recursive: true }).catch(console.error);
 
 // Current file to record to
