@@ -1,6 +1,6 @@
-git status              # See what's changed locally
-git add .               # Stage your changes
-git commit -m "message" # Commit your changes
-git pull                # Get latest from remote
+git status                                  # See what's changed locally (Optional)
+git add .                                   # Stage your changes
+git commit -m "message"                     # Commit your changes
+git pull                                    # Get latest from remote (If changes were made elsewhere)
 git config --global credential.helper store # Store username and password so you don't have to enter it every time
-git push                # Push your changes up
+git push                                    # Push your changes up
