@@ -116,6 +116,11 @@ function stopRecording(inputFPS) {
 }
 // Access points
 
+// Simple server status
+app.get('/', (req, res) => {
+    res.status(200);
+});
+
 // Connection status
 app.get('/camera/health', (req, res) => {
     const parser = new UAParser(req.headers['user-agent']);

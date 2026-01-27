@@ -13,6 +13,10 @@ proxy.on('error', (err, req, res) => {
 
 const server = http.createServer((req, res) => {
 	const targetUrl = req.url.slice(7);
+	if (!req.url.slice(1)) {
+		res.statusCode = 200;
+		res.end();
+	}
 	if (!targetUrl.startsWith('http')) {
 		res.writeHead(400, { 'Content-Type': 'text/plain' });
 		console.log('Error proxying request to:', targetUrl)
