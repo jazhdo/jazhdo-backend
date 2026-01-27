@@ -129,6 +129,7 @@ let textTime = null;
 let textMessage = '';
 let textLetterLength = 0;
 let textLetter = '';
+const startTime = Date.now();
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 async function getLetter(key, times) {
@@ -144,18 +145,21 @@ function textPrint(text) {
     lcd.print(text.slice(0, 16));
     lcd.print(text.slice(16), 2);
 }
+function close() {
+    rows.forEach(pin => gpiox.deinit_gpio(pin));
+    cols.forEach(pin => gpiox.deinit_gpio(pin));
+    lcd.close();
+    process.exit();
+}
+function logFile(text) { fs.appendFile(`./logs/door-keypad/log_${startTime}.txt`, `[${Date.now()}] ${text}`); }
 
 lcd.print('Initial Code Completed');
 console.log('Init Code Done');
 await sleep(1000);
 lcd.print('Passcode:');
 
-process.on('SIGINT', () => {
-    rows.forEach(pin => gpiox.deinit_gpio(pin));
-    cols.forEach(pin => gpiox.deinit_gpio(pin));
-    lcd.close();
-    process.exit();
-})
+process.on('SIGINT', close);
+process.on('SIGTERM', close);
 
 while (true) {
     let key = null;
