@@ -118,7 +118,7 @@ function stopRecording(inputFPS) {
 
 // Simple server status
 app.get('/', (req, res) => {
-    res.status(200);
+    res.status(200).send('Success.');
 });
 
 // Connection status
@@ -289,7 +289,7 @@ app.get('/camera/record/get/:filename', authenticateToken, (req, res) => {
     const filename = req.params.filename;
     const filePath = path.join(RECORDINGS_DIR, filename);
 
-    if (!fs.existsSync(filePath)) return res.status(404).json({ mee5ssage: 'Error file not found' });
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'Error file not found' });
 
     res.download(filePath);
 });
