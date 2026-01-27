@@ -8,6 +8,8 @@ import { UAParser } from 'ua-parser-js';
 import dotenv from 'dotenv';
 
 const app = express();
+app.set('trust proxy', true);
+
 const RECORDINGS_DIR = './camera-recordings';
 const CAMERA_CONFIG = {
     width: 1536,

@@ -5,7 +5,6 @@ async function active(url) {
     if (!url) return false
     try {
         const response = await fetch(url);
-        console.log('response:', response)
         return response.ok
     } catch { return false }
 }
