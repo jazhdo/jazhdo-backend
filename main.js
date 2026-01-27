@@ -9,7 +9,7 @@ async function active(url) {
     } catch { return false }
 }
 
-const proxy = httpProxy.createProxyServer({});
+const proxy = httpProxy.createProxyServer({ xfwd: true });
 const targetMap = {
     '/camera': 'http://localhost:3001',
     '/proxy': 'http://localhost:3002'
