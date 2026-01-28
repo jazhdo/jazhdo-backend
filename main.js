@@ -12,7 +12,8 @@ async function active(url) {
 }
 function logFile(text) {
     const now = new Date();
-    fs.appendFile(`/home/raspberrypi/jazhdo-backend-logs/main/log_${startTime}.txt`, `[${now.toISOString()}] ${text}\n\n`, (err) => { if (err) { console.log('Error logging:', err)} }); }
+    fs.appendFile(`/home/raspberrypi/jazhdo-backend-logs/main/log_${startTime}.txt`, `[${now.toISOString()}] ${text}\n\n`, (err) => { if (err) { console.log('Error logging:', err)} });
+}
 function userDetails(req) { return [req.socket.remoteAddress, UAParser(req.headers['user-agent'])] }
 function basicDetails(user) { return `IP: ${user[0]}\nBrowser: ${user[1].browser.name} version ${user[1].browser.version}\nDevice: ${user[1].device.vendor} ${user[1].device.model}\nOS: ${user[1].os.name} version ${user[1].os.version}` }
 
@@ -58,4 +59,5 @@ server.listen(3000, '0.0.0.0', () => {
     logFile('Server started.');
     console.log('Starting server...');
     console.log(`Access at http://[RPI_IP_ADDRESS]:3000/\nMore information can be found at https://github.com/jazhdo/jazhdo-backend/wiki`);
+    console.log('Access logs at ~/jazhdo-backend-logs/main/log_' + startTime + '.txt');
 });
