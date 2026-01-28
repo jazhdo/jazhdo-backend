@@ -10,7 +10,9 @@ async function active(url) {
         return response.ok
     } catch { return false }
 }
-function logFile(text) { fs.appendFile(`/home/raspberrypi/jazhdo-backend-logs/main/log_${startTime}.txt`, `[${Date.now()}] ${text}\n\n`, (err) => { if (err) { console.log('Error logging:', err)} }); }
+function logFile(text) {
+    const now = new Date();
+    fs.appendFile(`/home/raspberrypi/jazhdo-backend-logs/main/log_${startTime}.txt`, `[${now.toISOString()}] ${text}\n\n`, (err) => { if (err) { console.log('Error logging:', err)} }); }
 function userDetails(req) { return [req.socket.remoteAddress, UAParser(req.headers['user-agent'])] }
 function basicDetails(user) { return `IP: ${user[0]}\nBrowser: ${user[1].browser.name} version ${user[1].browser.version}\nDevice: ${user[1].device.vendor} ${user[1].device.model}\nOS: ${user[1].os.name} version ${user[1].os.version}` }
 
@@ -39,12 +41,12 @@ const server = http.createServer(async (req, res) => {
     } else {
         if (!target) {
             let user = userDetails(req);
-            logFile(`Attempted request to access nonexistant ${req.url} failed.\n${basicDetails(user)}`);
+            logFile(`Request to "${req.url}" failed.\n${basicDetails(user)}`);
             console.log(`Request to ${req.url} directed to Error 404`);
             res.statusCode = 404;
         } else if (!status) {
             let user = userDetails(req);
-            logFile(`Attempted reguest to access offline ${target} through url ${req.url} failed.\n${basicDetails(user)}`);
+            logFile(`Request to offline ${target} through url ${req.url} failed.\n${basicDetails(user)}`);
             console.log(`Unable to send ${req.url} directed to Error 503 (${target} offline)`);
             res.statusCode = 503;
         } else { res.statusCode = 500; }
