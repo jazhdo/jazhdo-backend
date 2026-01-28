@@ -41,14 +41,12 @@ const server = http.createServer(async (req, res) => {
         proxy.web(req, res, { target });
     } else {
         if (!target) {
-            let user = userDetails(req);
-            logFile(`Request to "${req.url}" failed.\n${basicDetails(user)}`);
-            console.log(`Request to ${req.url} directed to Error 404`);
+            logFile(`Request to "${req.url}" failed.\n${basicDetails(userDetails(req))}`);
+            console.log(`Request to "${req.url}" directed to Error 404`);
             res.statusCode = 404;
         } else if (!status) {
-            let user = userDetails(req);
-            logFile(`Request to offline ${target} through url ${req.url} failed.\n${basicDetails(user)}`);
-            console.log(`Unable to send ${req.url} directed to Error 503 (${target} offline)`);
+            logFile(`Request to offline ${target} through url "${req.url}" failed.\n${basicDetails(userDetails(req))}`);
+            console.log(`Unable to send "${req.url}" directed to Error 503 (${target} offline)`);
             res.statusCode = 503;
         } else { res.statusCode = 500; }
         res.end();
