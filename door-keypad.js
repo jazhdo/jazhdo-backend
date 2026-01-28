@@ -1,6 +1,5 @@
 import i2c from 'i2c-bus';
 import gpiox from '@iiot2k/gpiox';
-import fs from 'fs';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, getDoc, doc, addDoc, collection } from 'firebase/firestore';
 
@@ -129,7 +128,6 @@ let textTime = null;
 let textMessage = '';
 let textLetterLength = 0;
 let textLetter = '';
-const startTime = Date.now();
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 async function getLetter(key, times) {
@@ -151,7 +149,6 @@ function close() {
     lcd.close();
     process.exit();
 }
-function logFile(text) { fs.appendFile(`./logs/door-keypad/log_${startTime}.txt`, `[${Date.now()}] ${text}`); }
 
 lcd.print('Initial Code Completed');
 console.log('Init Code Done');
