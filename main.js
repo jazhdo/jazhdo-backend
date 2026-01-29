@@ -10,7 +10,10 @@ async function active(url) {
         return response.ok
     } catch { return false }
 }
-function logFile(text) { fs.appendFile(`/home/raspberrypi/jazhdo-backend-logs/main/log_${startTime}.txt`, `[${Date.now()}] ${text}`, () => {}); }
+function logFile(text) {
+    const now = new Date();
+    fs.appendFile(`/home/raspberrypi/jazhdo-backend-logs/main/log_${startTime}.txt`, `[${now.toISOString()}] ${text}\n\n`, (err) => { if (err) { console.log('Error logging:', err)} });
+}
 function userDetails(req) { return [req.socket.remoteAddress, UAParser(req.headers['user-agent'])] }
 function itemFalsy(list) {
     list.forEach((e) => { if (!e) { return true } });
@@ -48,13 +51,12 @@ const server = http.createServer(async (req, res) => {
         proxy.web(req, res, { target });
     } else {
         if (!target) {
-            let user = userDetails(req);
-            logFile(`Attempted request to access nonexistant ${req.url} failed.\n${basicDetails(user)}`);
-            console.log(`Request to ${req.url} directed to Error 404`);
+            logFile(`Request to "${req.url}" failed.\n${basicDetails(userDetails(req))}`);
+            console.log(`Request to "${req.url}" directed to Error 404`);
             res.statusCode = 404;
         } else if (!status) {
-            logFile(`Attempted reguest to access offline ${target} through url ${req.url} failed.\n${basicDetails(user)}`);
-            console.log(`Unable to send ${req.url} directed to Error 503 (${target} offline)`);
+            logFile(`Request to offline ${target} through url "${req.url}" failed.\n${basicDetails(userDetails(req))}`);
+            console.log(`Unable to send "${req.url}" directed to Error 503 (${target} offline)`);
             res.statusCode = 503;
         } else { res.statusCode = 500; }
         res.end();
@@ -65,4 +67,5 @@ server.listen(3000, '0.0.0.0', () => {
     logFile('Server started.');
     console.log('Starting server...');
     console.log(`Access at http://[RPI_IP_ADDRESS]:3000/\nMore information can be found at https://github.com/jazhdo/jazhdo-backend/wiki`);
+    console.log('Access logs at ~/jazhdo-backend-logs/main/log_' + startTime + '.txt');
 });
