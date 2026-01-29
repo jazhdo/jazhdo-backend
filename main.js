@@ -12,7 +12,17 @@ async function active(url) {
 }
 function logFile(text) { fs.appendFile(`/home/raspberrypi/jazhdo-backend-logs/main/log_${startTime}.txt`, `[${Date.now()}] ${text}`, () => {}); }
 function userDetails(req) { return [req.socket.remoteAddress, UAParser(req.headers['user-agent'])] }
-function basicDetails(user) { return `IP: ${user[0]}\nBrowser: ${user[1].browser.name} version ${user[1].browser.version}\nDevice: ${user[1].device.vendor} ${user[1].device.model}\nOS: ${user[1].os.name} version ${user[1].os.version}` }
+function itemFalsy(list) {
+    list.forEach((e) => { if (!e) { return true } });
+    return false
+}
+function basicDetails(user) {
+    const a = user[1];
+    let addOns;
+    const items = [a.browser.name, a.browser.version, a.device.vendor, a.device.model, a.os.name, a.os.version];
+    if (itemFalsy(items)) addOns = a.ua;
+    return addOns ? addOns : '' + `IP: ${user[0]}\nBrowser: ${items[0]} version ${items[1]}\nDevice: ${items[2]} ${items[3]}\nOS: ${items[4]} version ${items[5]}`
+}
 
 const startTime = Date.now();
 const proxy = httpProxy.createProxyServer({ xfwd: true });
