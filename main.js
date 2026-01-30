@@ -16,22 +16,20 @@ function logFile(text) {
 }
 function userDetails(req) { return [req.socket.remoteAddress, UAParser(req.headers['user-agent'])] }
 function itemFalsy(list) {
-    list.forEach((e) => { if (!e) { return true } });
-    return false
+    return some((e) => !e);
 }
 function basicDetails(user) {
     const a = user[1];
-    let addOns;
-    const items = [a.browser.name, a.browser.version, a.device.vendor, a.device.model, a.os.name, a.os.version];
-    if (itemFalsy(items)) addOns = a.ua;
-    return addOns ? addOns : '' + `IP: ${user[0]}\nBrowser: ${items[0]} version ${items[1]}\nDevice: ${items[2]} ${items[3]}\nOS: ${items[4]} version ${items[5]}`
+    let addOns = '';
+    if (itemFalsy([a.browser.name, a.browser.version, a.device.vendor, a.device.model, a.os.name, a.os.version])) addOns = 'User Agent: ' + a.ua + '\n';
+    return addOns + `IP: ${user[0]}\nBrowser: ${items[0]} version ${items[1]}\nDevice: ${items[2]} ${items[3]}\nOS: ${items[4]} version ${items[5]}`
 }
 
 const startTime = Date.now();
 const proxy = httpProxy.createProxyServer({ xfwd: true });
 const targetMap = {
-    '/camera': 'http://localhost:3001',
-    '/proxy': 'http://localhost:3002'
+    '/camera': '3001',
+    '/proxy': '3002'
 };
 
 const server = http.createServer(async (req, res) => {
@@ -47,16 +45,17 @@ const server = http.createServer(async (req, res) => {
     }
     
     if (target && status) {
-        console.log(`Request to ${req.url} directed to ${target}`);
-        proxy.web(req, res, { target });
+        console.log(`Request to ${req.url} directed to port ${target}`);
+        const toSend = `http://localhost:${target}`;
+        proxy.web(req, res, { toSend });
     } else {
         if (!target) {
             logFile(`Request to "${req.url}" failed.\n${basicDetails(userDetails(req))}`);
             console.log(`Request to "${req.url}" directed to Error 404`);
             res.statusCode = 404;
         } else if (!status) {
-            logFile(`Request to offline ${target} through url "${req.url}" failed.\n${basicDetails(userDetails(req))}`);
-            console.log(`Unable to send "${req.url}" directed to Error 503 (${target} offline)`);
+            logFile(`Request to offline port ${target} through url "${req.url}" failed.\n${basicDetails(userDetails(req))}`);
+            console.log(`Unable to send "${req.url}" directed to Error 503 (port ${target} offline)`);
             res.statusCode = 503;
         } else { res.statusCode = 500; }
         res.end();
