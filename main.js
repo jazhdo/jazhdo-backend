@@ -19,7 +19,8 @@ function itemFalsy(list) { return list.some(e => !e); }
 function basicDetails(user) {
     const a = user[1];
     let addOns = '';
-    if (itemFalsy([a.browser.name, a.browser.version, a.device.vendor, a.device.model, a.os.name, a.os.version])) addOns = 'User Agent: ' + a.ua + '\n';
+    const items = [a.browser.name, a.browser.version, a.device.vendor, a.device.model, a.os.name, a.os.version];
+    if (itemFalsy(items)) addOns = 'User Agent: ' + a.ua + '\n';
     return addOns + `IP: ${user[0]}\nBrowser: ${items[0]} version ${items[1]}\nDevice: ${items[2]} ${items[3]}\nOS: ${items[4]} version ${items[5]}`
 }
 
