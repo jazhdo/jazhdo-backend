@@ -165,10 +165,13 @@ app.get('/camera/stream', (req, res) => {
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
         if (err) return res.status(400).json({ message: 'Error token invalid' });
+        res.socket.setNoDelay(true);
         res.writeHead(200, {
             'Content-Type': 'multipart/x-mixed-replace; boundary=FRAME',
+            'Access-Control-Allow-Origin': '*',
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
+            'Connection': 'close',
             'Expires': '0',
             'X-Accel-Buffering': 'no'
         });
