@@ -4,6 +4,7 @@ import fs from 'fs';
 import { UAParser } from 'ua-parser-js';
 
 async function active(url) {
+    console.log('Checking if url', url, 'is online')
     if (!url) return false
     try {
         const response = await fetch(url);
