@@ -15,9 +15,7 @@ function logFile(text) {
     fs.appendFile(`/home/raspberrypi/jazhdo-backend-logs/main/log_${startTime}.txt`, `[${now.toISOString()}] ${text}\n\n`, (err) => { if (err) { console.log('Error logging:', err)} });
 }
 function userDetails(req) { return [req.socket.remoteAddress, UAParser(req.headers['user-agent'])] }
-function itemFalsy(list) {
-    return some((e) => !e);
-}
+function itemFalsy(list) { return list.some(e => !e); }
 function basicDetails(user) {
     const a = user[1];
     let addOns = '';
