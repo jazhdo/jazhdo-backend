@@ -49,7 +49,7 @@ const server = http.createServer(async (req, res) => {
     
     if (target && status) {
         console.log(`Request to ${req.url} directed to port ${target}`);
-        const toSend = `http://localhost:${target}`;
+        let toSend = 'http://localhost:' + target;
         proxy.web(req, res, { toSend });
     } else {
         if (!target) {
