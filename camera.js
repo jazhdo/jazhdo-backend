@@ -180,8 +180,10 @@ app.get('/camera/stream', (req, res) => {
             '--height', String(CAMERA_CONFIG.height),
             '--framerate', fpsToUse,
             '--codec', 'mjpeg',
+            '--quality', '50',
             '--inline',
             '-n',
+            '--flush',
             '-o', '-'
         ]);
         
