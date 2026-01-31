@@ -8,7 +8,10 @@ async function active(url) {
     try {
         const response = await fetch(url);
         return response.ok
-    } catch { return false }
+    } catch (e) {
+        console.log('Error', e, 'in checking if port was active');
+        return false 
+    }
 }
 function logFile(text) {
     const now = new Date();
