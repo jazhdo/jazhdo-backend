@@ -5,15 +5,11 @@ import os from 'os';
 import { UAParser } from 'ua-parser-js';
 
 async function active(url) {
-    console.log('Checking if url', url, 'is online')
     if (!url) return false
     try {
         const response = await fetch(url);
         return response.ok
-    } catch (e) {
-        console.log('Error', e, 'in checking if port was active');
-        return false 
-    }
+    } catch (e) { return false }
 }
 function logFile(text) {
     const now = new Date();
@@ -29,8 +25,8 @@ function basicDetails(user) {
 const startTime = Date.now();
 const proxy = httpProxy.createProxyServer({ xfwd: true });
 const targetMap = {
-    '/camera': '3001',
-    '/proxy': '3002'
+    '/camera': 'http://localhost:3001',
+    '/proxy': 'http://localhost:3002'
 };
 const home = os.homedir();
 
@@ -40,27 +36,25 @@ const server = http.createServer(async (req, res) => {
 
     for (const path in targetMap) {
         if (req.url.startsWith(path)) {
-            status = await active('http://localhost:'+targetMap[path]);
+            status = await active(targetMap[path]);
             target = targetMap[path];
             break;
         }
     }
     
     if (target && status) {
-        console.log(`Request to ${req.url} directed to port ${target}`);
-        proxy.web(req, res, { target: 'http://localhost:' + target });
-    } else {
-        if (!target) {
-            logFile(`Request to "${req.url}" failed.\n${basicDetails(userDetails(req))}`);
-            console.log(`Request to "${req.url}" directed to Error 404`);
-            res.statusCode = 404;
-        } else if (!status) {
-            logFile(`Request to offline port ${target} through url "${req.url}" failed.\n${basicDetails(userDetails(req))}`);
-            console.log(`Unable to send "${req.url}" directed to Error 503 (port ${target} offline)`);
-            res.statusCode = 503;
-        } else { res.statusCode = 500; }
-        res.end();
+        console.log(`Request to ${req.url} directed to ${target}`);
+        proxy.web(req, res, { target: target });
+    } else if (!target) {
+        logFile(`Request to "${req.url}" failed.\n${basicDetails(userDetails(req))}`);
+        console.log(`Error 404: Request to "${req.url}"`);
+        res.statusCode = 404;
+    } else if (!status) {
+        logFile(`Request to offline url ${target} through url "${req.url}" failed.\n${basicDetails(userDetails(req))}`);
+        console.log(`Error 503: Request to "${req.url}" (port ${target} offline)`);
+        res.statusCode = 503;
     }
+    res.end();
 });
 
 server.listen(3000, '0.0.0.0', () => {
