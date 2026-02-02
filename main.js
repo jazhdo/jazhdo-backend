@@ -43,15 +43,15 @@ const server = http.createServer(async (req, res) => {
     }
     
     if (target && status) {
-        console.log(`Request to ${req.url} directed to ${target}`);
+        console.log(`\x1b[32mSuccess\x1b[0m: Request to ${req.url} directed to ${target}`);
         proxy.web(req, res, { target: target });
     } else if (!target) {
-        logFile(`Request to "${req.url}" failed.\n${basicDetails(userDetails(req))}`);
-        console.log(`Error 404: Request to "${req.url}"`);
+        logFile(`Error 404: Request to "${req.url}"\n${basicDetails(userDetails(req))}`);
+        console.log(`\x1b[33mError 404\x1b[0m: Request to "${req.url}"`);
         res.statusCode = 404;
     } else if (!status) {
-        logFile(`Request to offline url ${target} through url "${req.url}" failed.\n${basicDetails(userDetails(req))}`);
-        console.log(`Error 503: Request to "${req.url}" (port ${target} offline)`);
+        logFile(`Error 503: Request to "${req.url}" (port ${target} offline).\n${basicDetails(userDetails(req))}`);
+        console.log(`\x1b[31mError 503\x1b[0m: Request to "${req.url}" (port ${target} offline)`);
         res.statusCode = 503;
     }
     res.end();
