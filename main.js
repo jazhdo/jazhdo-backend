@@ -2,6 +2,7 @@ import http from 'http';
 import httpProxy from 'http-proxy';
 import fs from 'fs';
 import os from 'os';
+import readline from 'readline';
 import { UAParser } from 'ua-parser-js';
 
 async function active(url) {
@@ -24,6 +25,11 @@ function basicDetails(user) {
     const a = user[1];
     const items = [a.browser.name, a.browser.version, a.device.vendor, a.device.model, a.os.name, a.os.version];
     return `User Agent: ${a.ua}\nIP: ${user[0]}\nBrowser: ${items[0]} version ${items[1]}\nDevice: ${items[2]} ${items[3]}\nOS: ${items[4]} version ${items[5]}`
+}
+function shutdown() {
+    proxy.close();
+    server.close();
+    process.exit();
 }
 
 const startTime = Date.now();
@@ -69,3 +75,6 @@ server.listen(3000, '0.0.0.0', () => {
     console.log(`Access at http://[RPI_IP_ADDRESS]:3000/\nMore information can be found at https://github.com/jazhdo/jazhdo-backend/wiki`);
     console.log('Access logs at '+home+'/jazhdo-backend-logs/main/log_' + startTime + '.txt');
 });
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
