@@ -4,3 +4,47 @@ git commit -m "message"                     # Commit your changes
 git pull                                    # Get latest from remote (If changes were made elsewhere)
 git config --global credential.helper store # Store username and password so you don't have to enter it every time
 git push                                    # Push your changes up
+
+How to have two branches (one for production, one for development)
+
+INITIAL SETUP (once)
+--------------------
+git checkout -b dev
+git push -u origin dev
+
+
+DAILY TESTING (frequent commits)
+---------------------------------
+git checkout dev
+# make changes...
+git add .
+git commit -m "testing xyz"
+git push origin dev
+
+# On other devices:
+git checkout dev
+git pull origin dev
+
+
+PROMOTE TO PRODUCTION (when polished)
+--------------------------------------
+git checkout main
+git merge --squash dev
+git commit -m "Add polished feature X"
+git push origin main
+git checkout dev
+
+
+QUICK COMMANDS
+--------------
+Work on tests:      git checkout dev
+Push test code:     git push origin dev
+Promote to main:    git checkout main && git merge --squash dev
+Push production:    git push origin main
+Back to testing:    git checkout dev
+
+
+BRANCHES
+--------
+dev  = messy test commits, sync across devices
+main = clean polished commits only

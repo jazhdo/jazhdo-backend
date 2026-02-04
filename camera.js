@@ -150,7 +150,7 @@ app.post('/camera/login', (req, res) => {
         const token = jwt.sign(
             { username },
             SECRET_KEY,
-            { expiresIn: '24h' }
+            { expiresIn: '2h' }
         );
         return res.status(201).json({ token });
     }
@@ -293,7 +293,8 @@ app.get('/camera/record/list', authenticateToken, (req, res) => {
 
 // Download recording
 app.get('/camera/record/get/:filename', authenticateToken, (req, res) => {
-    const filename = req.params.filename;
+    // Use .match(/\d+\.?\d*/g) in frontend to get time number
+    const filename = 'recording_' + req.params.filename + '.mp4';
     const filePath = path.join(RECORDINGS_DIR, filename);
 
     if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'Error file not found' });
