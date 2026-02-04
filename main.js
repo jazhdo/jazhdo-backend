@@ -27,7 +27,8 @@ const startTime = Date.now();
 const proxy = httpProxy.createProxyServer({ xfwd: true });
 const targetMap = {
     '/camera': 'http://localhost:3001',
-    '/proxy': 'http://localhost:3002'
+    '/proxy': 'http://localhost:3002',
+    '/db': 'http://localhost:3003'
 };
 const home = os.homedir();
 
