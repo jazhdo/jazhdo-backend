@@ -14,6 +14,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/user/ip', (req, res) => {
+    console.log('Returning ip.')
     res.json({ ip: req.ip });
 });
 
