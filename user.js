@@ -6,10 +6,12 @@ const server = http.createServer((req, res) => {
 });
 app.get('/', (req, res) => {
     res.status(200).send('Success');
+    res.end();
 });
 
 app.get('/user/ip', (req, res) => {
     res.json({ ip: req.ip });
+    res.end();
 });
 
 server.listen(3004, () => {
