@@ -1,26 +1,29 @@
-import http from 'http';
 import cors from 'cors';
 import express from 'express';
 const app = express();
-const server = http.createServer({});
-
+app.set('trust proxy', true);
 app.use(cors({
     origin: '*',
     methods: ['GET'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type']
 }));
 app.use(express.json());
 
 app.get('/', (req, res) => {
     res.status(200).send('Success');
-    res.end();
 });
 
 app.get('/user/ip', (req, res) => {
     res.json({ ip: req.ip });
-    res.end();
 });
 
-server.listen(3004, () => {
+const server = app.listen(3004, () => {
     console.log(`Server is running on port 3004`);
+});
+
+// Cleanup on exit
+process.on('SIGINT', () => {
+    console.log('\nShutting down...');
+    server.close();
+    process.exit();
 });
