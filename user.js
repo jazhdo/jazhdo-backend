@@ -15,7 +15,7 @@ app.get('/', (req, res) => {
 
 app.get('/user/ip', (req, res) => {
     console.log('Returning ip.')
-    res.json({ ip: req.ip });
+    res.send(JSON.stringify({ ip: req.ip }));
 });
 
 const server = app.listen(3004, () => {
