@@ -1,9 +1,15 @@
 import http from 'http';
 import express from 'express';
 const app = express();
-const server = http.createServer((req, res) => {
-    res.setHeader('Content-Type', 'application/json');
-});
+const server = http.createServer({});
+
+app.use(cors({
+    origin: '*',
+    methods: ['GET'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json());
+
 app.get('/', (req, res) => {
     res.status(200).send('Success');
     res.end();
