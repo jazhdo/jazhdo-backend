@@ -2,8 +2,38 @@ import http from 'http';
 import httpProxy from 'http-proxy';
 import fs from 'fs';
 import os from 'os';
-import readline from 'readline';
 import { UAParser } from 'ua-parser-js';
+
+// Checking for options
+const helpMessage = `
+Usage: "node main.js [options]
+
+Options:
+    -h or --help: Brings up this help menu
+    -r or --redirect: Configures server to redirect to a ip given after the command
+`;
+const options = [];
+process.argv.slice(2).forEach(e => {
+    if (e.startsWith('-')) options.push([e]);
+    else {
+        if (!options[options.length - 1][1]) options[options.length - 1].push([e]);
+        else options[options.length - 1][1].push(e);
+    };
+});
+options.forEach(([command, terms]) => {
+    switch (command) {
+        case '-r':            
+            targetMap = { '/': terms[0] };
+            console.log('Redirecting all requests to', terms[0]);
+            break;
+        case '-h' || '--help':
+            console.log(helpMessage);
+            process.exit();
+        default:
+            console.log('Option', command, 'is not a valid option.');
+            break;
+    }
+});
 
 async function active(url) {
     if (!url) return false
@@ -31,7 +61,7 @@ function bold(text) { return '\x1b[1m' + text + '\x1b[0m' }
 
 const startTime = Date.now();
 const proxy = httpProxy.createProxyServer({ xfwd: true });
-const targetMap = {
+let targetMap = {
     '/camera': 'http://localhost:3001',
     '/proxy': 'http://localhost:3002',
     '/db': 'http://localhost:3003',
@@ -69,8 +99,9 @@ const server = http.createServer(async (req, res) => {
 server.listen(3000, '0.0.0.0', () => {
     logFile('Server started.');
     console.log('Starting server...');
-    console.log(`Access at http://[RPI_IP_ADDRESS]:3000/\nMore information can be found at https://github.com/jazhdo/jazhdo-backend/wiki`);
-    console.log('Access logs at '+home+'/jazhdo-backend-logs/main/log_' + startTime + '.txt');
+    console.log('Access server at http://[RPI_IP_ADDRESS]:3000/.');
+    console.log('More information can be found at https://github.com/jazhdo/jazhdo-backend/wiki');
+    console.log('Access logs at ' + home + '/jazhdo-backend-logs/main/log_' + startTime + '.txt');
 });
 
 process.on('SIGINT', shutdown);
