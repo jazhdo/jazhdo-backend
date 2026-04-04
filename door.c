@@ -28,9 +28,15 @@ static int xioctl(int fd, unsigned long req, void *arg) {
 }
 
 void configure_pipeline() {
-    if (system("media-ctl -d /dev/media0 -V '\"imx708\":0 [fmt:SRGGB10_1X10/2304x1296 field:none];'") != 0) {
+    int ret = 0;
+    ret |= system("media-ctl -d /dev/media1 -V \"'imx708':0 [fmt:SRGGB10_1X10/2304x1296 field:none]\"");
+    ret |= system("media-ctl -d /dev/media1 -V \"'csi2':0 [fmt:SRGGB10_1X10/2304x1296 field:none]\"");
+    ret |= system("media-ctl -d /dev/media1 -V \"'csi2':4 [fmt:SRGGB10_1X10/2304x1296 field:none]\"");
+    ret |= system("media-ctl -d /dev/media1 --links \"'csi2':4 -> 'rp1-cfe-csi2_ch0':0 [1]\"");
+    if (ret != 0) {
         fprintf(stderr, "pipeline config failed\n");
-    };
+        exit(1);
+    }
 }
 
 FILE *open_ffmpeg() {
