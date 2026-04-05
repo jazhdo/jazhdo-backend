@@ -2,15 +2,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
+#include <pthread.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <sys/select.h>
-#include <signal.h>
 
 #define PORT 8080
 #define BOUNDARY "jpgboundary"
 #define BUFSIZE (1024 * 1024)
+
+FILE *cam = NULL;
+volatile FILE *recording = NULL;
+int server_fd;
 
 FILE *open_stream(void) {
     FILE *pipe = popen(
@@ -24,6 +29,87 @@ FILE *open_stream(void) {
     );
     if (!pipe) { fprintf(stderr, "failed to open rpicam-vid\n"); exit(1); }
     return pipe;
+}
+
+void *handle_client(void *arg) {
+    int client_fd = *(int *)arg;
+    free(arg);
+
+    int flag = 1;
+    setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+
+    char req[1024] = {0};
+    read(client_fd, req, sizeof(req) - 1);
+
+    if (strstr(req, "GET / ")) {
+        dprintf(client_fd,
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/html\r\n\r\n"
+            "<html><body style='margin:0'>"
+            "<img src='/stream' style='width:100%%'>"
+            "</body></html>\r\n");
+        close(client_fd);
+        return NULL;
+    }
+
+    if (strstr(req, "GET /record/start")) {
+        if (!recording) recording = fopen("recording.mjpeg", "wb");
+        dprintf(client_fd, "HTTP/1.1 200 OK\r\n\r\nRecording started\r\n");
+        close(client_fd);
+        return NULL;
+    }
+
+    if (strstr(req, "GET /record/stop")) {
+        if (recording) { fclose((FILE *)recording); recording = NULL; }
+        dprintf(client_fd, "HTTP/1.1 200 OK\r\n\r\nRecording stopped\r\n");
+        close(client_fd);
+        return NULL;
+    }
+
+    /* stream endpoint */
+    dprintf(client_fd,
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: multipart/x-mixed-replace; boundary=%s\r\n"
+        "Cache-Control: no-cache\r\n\r\n", BOUNDARY);
+
+    static unsigned char frame[BUFSIZE];
+    int len = 0;
+    int c, prev = 0;
+
+    while ((c = fgetc(cam)) != EOF) {
+        if (len < BUFSIZE) frame[len++] = c;
+        if (prev == 0xFF && c == 0xD9) {
+            dprintf(client_fd,
+                "--%s\r\n"
+                "Content-Type: image/jpeg\r\n"
+                "Content-Length: %d\r\n\r\n",
+                BOUNDARY, len);
+            if (write(client_fd, frame, len) < 0) break;
+            dprintf(client_fd, "\r\n");
+            if (recording) {
+                fwrite(frame, 1, len, (FILE *)recording);
+                fflush((FILE *)recording);
+            }
+            len = 0;
+        }
+        prev = c;
+    }
+
+    /* drain pipe while waiting for next client */
+    fd_set fds;
+    struct timeval tv;
+    unsigned char drain[4096];
+    while (1) {
+        FD_ZERO(&fds);
+        FD_SET(server_fd, &fds);
+        tv.tv_sec = 0;
+        tv.tv_usec = 0;
+        if (select(server_fd + 1, &fds, NULL, NULL, &tv) > 0) break;
+        fread(drain, 1, sizeof(drain), cam);
+    }
+
+    close(client_fd);
+    return NULL;
 }
 
 int start_server(void) {
@@ -43,71 +129,17 @@ int start_server(void) {
 
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
-    FILE *cam = open_stream();
-    int server_fd = start_server();
+    cam = open_stream();
+    server_fd = start_server();
 
     while (1) {
-        int client_fd = accept(server_fd, NULL, NULL);
-        if (client_fd < 0) { perror("accept"); continue; }
+        int *client_fd = malloc(sizeof(int));
+        *client_fd = accept(server_fd, NULL, NULL);
+        if (*client_fd < 0) { perror("accept"); free(client_fd); continue; }
 
-        int flag = 1;
-        setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
-
-        char req[1024] = {0};
-        read(client_fd, req, sizeof(req) - 1);
-
-        if (strstr(req, "GET / ")) {
-            dprintf(client_fd,
-                "HTTP/1.1 200 OK\r\n"
-                "Content-Type: text/html\r\n\r\n"
-                "<html><body style='margin:0'>"
-                "<img src='/stream' style='width:100%%'>"
-                "</body></html>\r\n");
-            close(client_fd);
-            continue;
-        }
-
-        /* stream endpoint */
-        dprintf(client_fd,
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: multipart/x-mixed-replace; boundary=%s\r\n"
-            "Cache-Control: no-cache\r\n\r\n", BOUNDARY);
-
-        static unsigned char frame[BUFSIZE];
-        int len = 0;
-        int c, prev = 0;
-
-        while ((c = fgetc(cam)) != EOF) {
-            if (len < BUFSIZE) frame[len++] = c;
-            if (prev == 0xFF && c == 0xD9) {
-                dprintf(client_fd,
-                    "--%s\r\n"
-                    "Content-Type: image/jpeg\r\n"
-                    "Content-Length: %d\r\n\r\n",
-                    BOUNDARY, len);
-                if (write(client_fd, frame, len) < 0) break;
-                dprintf(client_fd, "\r\n");
-                len = 0;
-            }
-            prev = c;
-        }
-
-        close(client_fd);
-
-        /* drain pipe while waiting for next client */
-        fd_set fds;
-        struct timeval tv;
-        while (1) {
-            FD_ZERO(&fds);
-            FD_SET(server_fd, &fds);
-            tv.tv_sec = 0;
-            tv.tv_usec = 0;
-            /* if a new client is waiting, stop draining */
-            if (select(server_fd + 1, &fds, NULL, NULL, &tv) > 0) break;
-            /* otherwise drain a chunk from cam */
-            unsigned char drain[4096];
-            fread(drain, 1, sizeof(drain), cam);
-        }
+        pthread_t thread;
+        pthread_create(&thread, NULL, handle_client, client_fd);
+        pthread_detach(thread);
     }
 
     pclose(cam);
