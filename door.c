@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <sys/select.h>
 
 #define PORT 8080
 #define BOUNDARY "jpgboundary"
@@ -90,6 +91,21 @@ int main(void) {
         }
 
         close(client_fd);
+
+        /* drain pipe while waiting for next client */
+        fd_set fds;
+        struct timeval tv;
+        while (1) {
+            FD_ZERO(&fds);
+            FD_SET(server_fd, &fds);
+            tv.tv_sec = 0;
+            tv.tv_usec = 0;
+            /* if a new client is waiting, stop draining */
+            if (select(server_fd + 1, &fds, NULL, NULL, &tv) > 0) break;
+            /* otherwise drain a chunk from cam */
+            unsigned char drain[4096];
+            fread(drain, 1, sizeof(drain), cam);
+        }
     }
 
     pclose(cam);
