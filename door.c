@@ -72,7 +72,11 @@ void *handle_client(void *arg) {
         "Content-Type: multipart/x-mixed-replace; boundary=%s\r\n"
         "Cache-Control: no-cache\r\n\r\n", BOUNDARY);
 
-    static unsigned char frame[BUFSIZE];
+    unsigned char *frame = malloc(BUFSIZE);
+    if (!frame) {
+        close(client_fd);
+        return NULL;
+    }
     int len = 0;
     int c, prev = 0;
 
@@ -105,9 +109,10 @@ void *handle_client(void *arg) {
         tv.tv_sec = 0;
         tv.tv_usec = 0;
         if (select(server_fd + 1, &fds, NULL, NULL, &tv) > 0) break;
-        fread(drain, 1, sizeof(drain), cam);
+        if (!recording) fread(drain, 1, sizeof(drain), cam);
     }
 
+    free(frame);
     close(client_fd);
     return NULL;
 }
