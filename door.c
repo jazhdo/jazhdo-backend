@@ -23,7 +23,7 @@ FILE *open_stream(void) {
     FILE *pipe = popen(
         "rpicam-vid -t 0"
         " --width 1536 --height 864"
-        " --framerate 30"
+        " --framerate 60"
         " --codec mjpeg"
         " --nopreview"
         " -o -",
@@ -71,7 +71,7 @@ void *handle_client(void *arg) {
         strftime(filename, sizeof(filename), "recording_%Y%m%d_%H%M%S.mp4", tm);
 
         char cmd[256];
-        snprintf(cmd, sizeof(cmd), "ffmpeg -y -f mjpeg -i recording.mjpeg -c:v copy %s &", filename);
+        snprintf(cmd, sizeof(cmd), "ffmpeg -y -framerate 60 -f mjpeg -i recording.mjpeg -c:v copy %s &", filename);
         system(cmd);
         dprintf(client_fd, "HTTP/1.1 200 OK\r\n\r\nRecording stopped\r\n");
         close(client_fd);
