@@ -1,159 +1,82 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include <fcntl.h>
-# include <unistd.h>
-# include <errno.h>
-# include <sys/ioctl.h>
-# include <sys/mman.h>
-# include <linux/videodev2.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
-# define DEVICE "/dev/video0"
-# define WIDTH 2304
-# define HEIGHT 1296
-# define NBUFS 4
-# define FMT v4l2_fourcc('p', 'R', 'A', 'A')
+#define PORT 8080
+#define WIDTH 2304
+#define HEIGHT 1296
+#define FPS 30
+#define BOUNDARY "frame"
 
-struct buf {
-    void * start;
-    size_t len;
-};
-
-static int xioctl(int fd, unsigned long req, void *arg) {
-    int r;
-    do {
-        r = ioctl(fd, req, arg);
-    } while (r == -1 && errno == EINTR);
-    return r;
-}
-
-void configure_pipeline() {
-    int ret = 0;
-    ret |= system("media-ctl -d /dev/media1 -V \"'imx708':0 [fmt:SRGGB10_1X10/2304x1296 field:none]\"");
-    ret |= system("media-ctl -d /dev/media1 -V \"'csi2':0 [fmt:SRGGB10_1X10/2304x1296 field:none]\"");
-    ret |= system("media-ctl -d /dev/media1 -V \"'csi2':4 [fmt:SRGGB10_1X10/2304x1296 field:none]\"");
-    ret |= system("media-ctl -d /dev/media1 --links \"'csi2':4 -> 'rp1-cfe-csi2_ch0':0 [1]\"");
-    if (ret != 0) {
-        fprintf(stderr, "pipeline config failed\n");
-        exit(1);
-    }
-}
-
-FILE *open_ffmpeg() {
-    FILE *pipe = popen("ffmpeg -f rawvideo -pixel_format bayer_rggb16le -video_size 2304x1296 -framerate 30 -i pipe:0 -vf format=rgb24 -pix_fmt yuvj420p -f mjpeg pipe:1", "w");
+FILE *open_stream(void) {
+    FILE *pipe = popen("rpicam-vid -t 0 --width 2304 --height 1296 --framerate 30 --codec mjpeg --nopreview -o -", "r");
     if (!pipe) {
-        fprintf(stderr, "failed to open ffmpeg\n");
+        fprintf(stderr, "failed to open rpicam-vid\n");
         exit(1);
     }
     return pipe;
 }
 
-int main() {
-    configure_pipeline();
-    FILE *ffmpeg = open_ffmpeg();
-
-    /* open device */
-    int fd = open(DEVICE, O_RDWR | O_NONBLOCK);
-    if (fd < 0) {
-        perror("open");
-        return 1;
+int start_server(void) {
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd < 0) {
+        perror("socket");
+        exit(1);
     }
 
-    /* set format */
-    struct v4l2_format fmt = {0};
-    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    fmt.fmt.pix.width = WIDTH;
-    fmt.fmt.pix.height = HEIGHT;
-    fmt.fmt.pix.pixelformat = FMT;
-    fmt.fmt.pix.field = V4L2_FIELD_NONE;
-    if (xioctl(fd, VIDIOC_S_FMT, &fmt) < 0) {
-        perror("S_FMT");
-        return 1;
+    int opt = 1;
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    struct sockaddr_in addr = {0};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(PORT);
+
+    if (bind(server_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        perror("bind");
+        exit(1);
+    }
+    if (listen(server_fd, 1) < 0) {
+        perror("listen");
+        exit(1);
     }
 
-    /* request buffers */
-    struct v4l2_requestbuffers req = {0};
-    req.count = NBUFS;
-    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    req.memory = V4L2_MEMORY_MMAP;
-    if (xioctl(fd, VIDIOC_REQBUFS, &req) < 0) {
-        perror("S_FMT");
-        return 1;
-    }
+    printf("server listening on http://0.0.0.0:%d\n", PORT);
+    return server_fd;
+}
 
-    /* mmap buffers */
-    struct buf bufs[NBUFS];
-    for (int i = 0; i < NBUFS; i++) {
-        struct v4l2_buffer b = {0};
-        b.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        b.memory = V4L2_MEMORY_MMAP;
-        b.index = i;
-        if (xioctl(fd, VIDIOC_QUERYBUF, &b) < 0) {
-            perror("QUERYBUF");
-            return 1;
-        }
-        bufs[i].len = b.length;
-        bufs[i].start = mmap(NULL, b.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, b.m.offset);
-        if (bufs[i].start == MAP_FAILED) {
-            perror("mmap");
-            return 1;
-        }
-    }
+int main(void) {
+    FILE *cam = open_stream();
+    int server_fd = start_server();
 
-    /* queue buffers */
-    for (int i = 0; i < NBUFS; i++) {
-        struct v4l2_buffer b = {0};
-        b.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        b.memory = V4L2_MEMORY_MMAP;
-        b.index = i;
-        if (xioctl(fd, VIDIOC_QBUF, &b) < 0) {
-            perror("QBUF");
-            return 1;
-        }
-    }
-
-    /* start streaming */
-    enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    if (xioctl(fd, VIDIOC_STREAMON, &type) < 0) {
-        perror("STREAMON");
-        return 1;
-    }
-
-    printf("streaming on %s %dx%d\n", DEVICE, WIDTH, HEIGHT);
-
-    /* capture loop */
+    /* read jpeg frames from rpicam-vid and serve over http */
     while (1) {
-        fd_set fds;
-        FD_ZERO(&fds);
-        FD_SET(fd, &fds);
-        struct timeval tv = {5, 0};
-        if (select(fd + 1, &fds, NULL, NULL, &tv) <= 0) {
-            perror("select");
-            break;
+        /* wait for a browser to connect */
+        int client_fd = accept(server_fd, NULL, NULL);
+        if (client_fd < 0) {
+            perror("accept");
+            continue;
         }
 
-        struct v4l2_buffer b = {0};
-        b.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        b.memory = V4L2_MEMORY_MMAP;
-        if (xioctl(fd, VIDIOC_DQBUF, &b) < 0) {
-            perror("DQBUF");
-            break;
+        /* send HTTP headers for MJPEG stream */
+        dprintf(client_fd, "HTTP/1.1 200 OK\r\nContent-Type: multipart/x-mixed-replace; boundary=%s\r\n\r\n", BOUNDARY);
+
+        /* stream frames */
+        unsigned char buf[65536];
+        size_t n;
+        while ((n = fread(buf, 1, sizeof(buf), cam)) > 0) {
+            dprintf(client_fd, "--%s\r\nContent-Type: image/jpeg\r\nContent-Length: %zu\r\n\r\n", BOUNDARY, n);
+            write(client_fd, buf, n);
+            dprintf(client_fd, "\r\n");
         }
 
-        /* raw frame ? write to stdout */
-        fwrite(bufs[b.index].start, 1, b.bytesused, ffmpeg);
-        fflush(ffmpeg);
-
-        if (xioctl(fd, VIDIOC_QBUF, &b) < 0) {
-            perror("QBUF requeue");
-            break;
-        }
+        close(client_fd);
     }
 
-    /* cleanup */
-    xioctl(fd, VIDIOC_STREAMOFF, &type);
-    for (int i = 0; i < NBUFS; i++) munmap(bufs[i].start, bufs[i].len);
-    close(fd);
-    pclose(ffmpeg);
+    pclose(cam);
+    close(server_fd);
     return 0;
 }
