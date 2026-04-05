@@ -40,7 +40,7 @@ void configure_pipeline() {
 }
 
 FILE *open_ffmpeg() {
-    FILE *pipe = popen("ffmpeg -f rawvideo -pixel_format bayer_rggb16le -video_size 2304x1296 -framerate 30 -i pipe:0 -f mjpeg pipe:1", "w");
+    FILE *pipe = popen("ffmpeg -f rawvideo -pixel_format bayer_rggb16le -video_size 2304x1296 -framerate 30 -i pipe:0 -vf debayer=demosaicing=bilinear -pix_fmt yuvj420p -f mjpeg pipe:1", "w");
     if (!pipe) {
         fprintf(stderr, "failed to open ffmpeg\n");
         exit(1);
