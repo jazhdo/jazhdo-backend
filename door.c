@@ -8,6 +8,7 @@
 #include <sys/select.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <time.h>
 
 #define PORT 8080
 #define BOUNDARY "jpgboundary"
@@ -64,7 +65,14 @@ void *handle_client(void *arg) {
         pthread_mutex_lock(&rec_lock);
         if (recording) { fclose((FILE *)recording); recording = NULL; }
         pthread_mutex_unlock(&rec_lock);
-        system("ffmpeg -f mjpeg -i recording.mjpeg -c:v copy output.mp4 &");
+        char filename[64];
+        time_t t = time(NULL);
+        struct tm *tm = localtime(&t);
+        strftime(filename, sizeof(filename), "recording_%Y%m%d_%H%M%S.mp4", tm);
+
+        char cmd[256];
+        snprintf(cmd, sizeof(cmd), "ffmpeg -y -f mjpeg -i recording.mjpeg -c:v copy %s &", filename);
+        system(cmd);
         dprintf(client_fd, "HTTP/1.1 200 OK\r\n\r\nRecording stopped\r\n");
         close(client_fd);
         return NULL;
