@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/select.h>
+#include <signal.h>
 
 #define PORT 8080
 #define BOUNDARY "jpgboundary"
@@ -41,6 +42,7 @@ int start_server(void) {
 }
 
 int main(void) {
+    signal(SIGPIPE, SIG_IGN);
     FILE *cam = open_stream();
     int server_fd = start_server();
 
