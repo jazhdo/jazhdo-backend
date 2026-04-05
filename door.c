@@ -16,6 +16,7 @@
 FILE *cam = NULL;
 volatile FILE *recording = NULL;
 int server_fd;
+pthread_mutex_t cam_lock = PTHREAD_MUTEX_INITIALIZER;
 
 FILE *open_stream(void) {
     FILE *pipe = popen(
@@ -61,6 +62,7 @@ void *handle_client(void *arg) {
 
     if (strstr(req, "GET /record/stop")) {
         if (recording) { fclose((FILE *)recording); recording = NULL; }
+        system("ffmpeg -f mjpeg -i recording.mjpeg -c:v copy output.mp4");
         dprintf(client_fd, "HTTP/1.1 200 OK\r\n\r\nRecording stopped\r\n");
         close(client_fd);
         return NULL;
@@ -91,6 +93,7 @@ void *handle_client(void *arg) {
             if (write(client_fd, frame, len) < 0) break;
             dprintf(client_fd, "\r\n");
             if (recording) {
+                printf("writing frame %d bytes\n", len);
                 fwrite(frame, 1, len, (FILE *)recording);
                 fflush((FILE *)recording);
             }
