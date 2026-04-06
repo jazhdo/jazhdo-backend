@@ -453,13 +453,15 @@ void *LCD(void *arg) {
                         break;
                 }
             }
-            if (key == '#') printf("Action: Submitted.");
-            else if (key == '*') printf("Action: Deleted.");
+            if (key == '#') printf("\nAction: Submitted.");
+            else if (key == '*') printf("\nAction: Deleted.");
             else {
                 char keystr[2] = {key, '\0'};
                 char *show = concat(keystr, " pressed");
-                printf("Action: %s", show);
+                char *newline = concat("\n", show);
+                printf("\nAction: %s", newline);
                 free(show);
+                free(newline);
             }
         } else if (textMode == 1 && textTime != 0 && (time(NULL) - textTime >= 1) && strlen(textMessage) < 28) {
             if (textLetter) {
