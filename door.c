@@ -329,6 +329,7 @@ void *LCD(void *arg) {
             for (int ri = 0; ri < 4; ri++) {
                 if (gpiod_line_request_get_value(rows, rowpins[ri]) == GPIOD_LINE_VALUE_ACTIVE) {
                     key = keys[ri][ci];
+                    printf("\nWhen row %d was set to 1, column %d recieved 1.", ri, ci);
                     break;
                 }
             }
@@ -369,7 +370,7 @@ void *LCD(void *arg) {
                         createdAt: new Date()
                     });
                     */
-                    printf("Message sent: %s", textMessage);
+                    printf("\nMessage sent: %s", textMessage);
                     /* textReset() for reference*/
                     /* function textReset() {
                         textTime = null;
@@ -395,28 +396,29 @@ void *LCD(void *arg) {
                     lcd_print(lcd_fd, "Passcode:", 0);
                 }
             } else {
+                printf("\nKeypress recieved: %c", key);
                 switch (key) {
                     case '#':
                         /* parse dotenv values for prohibited and allowed */
                         if (env_load("./.env.local", false) == -1) {
                             lcd_print(lcd_fd, "File Error", 0);
-                            printf("Error occurred while getting ./.env.local");
+                            printf("\nError occurred while getting ./.env.local");
                             sleep(2);
                         } else if (strlen(value) < 6) {
                             lcd_print(lcd_fd, "6 digits only", 0);
-                            printf("Incomplete passcode entered.");
+                            printf("\nIncomplete passcode entered.");
                             sleep(2);
                         } else if (getenv((const char *)value) && atoi(getenv((const char *)value)) == 0) {
                             lcd_print(lcd_fd, "Prohibited.", 0);
-                            printf("Prohibited passcode %s entered.", value);
+                            printf("\nProhibited passcode %s entered.", value);
                             sleep(2);
                         } else if (getenv((const char *)value) && atoi(getenv((const char *)value)) == 1) {
                             lcd_print(lcd_fd, "Unlocking...", 0);
-                            printf("Allowed passcode %s entered.", value);
+                            printf("\nAllowed passcode %s entered.", value);
                             sleep(3);
                         } else {
                             lcd_print(lcd_fd, "Incorrect.", 0);
-                            printf("Incorrect passcode %s entered.", value);
+                            printf("\nIncorrect passcode %s entered.", value);
                             sleep(2);
                         }
                         lcd_print(lcd_fd, "Passcode:", 0);
@@ -458,11 +460,9 @@ void *LCD(void *arg) {
             else {
                 char keystr[2] = {key, '\0'};
                 char *show = concat(keystr, " pressed");
-                char *newline = concat("\n", show);
-                printf("\nAction: %s", newline);
+                printf("\nAction: %s", show);
                 free(show);
-                free(newline);
-            }
+             }
         } else if (textMode == 1 && textTime != 0 && (time(NULL) - textTime >= 1) && strlen(textMessage) < 28) {
             if (textLetter) {
                 textMessage[strlen(textMessage)] = letters[textLetter - '0'][textLetterLength % strlen(letters[textLetter - '0'])];
@@ -474,7 +474,7 @@ void *LCD(void *arg) {
             char *show = concat("msg:", textMessage);
             lcd_fit(lcd_fd, show);
             free(show);
-            printf("Adding letter because of timeout.");
+            printf("\nAdding letter because of timeout.");
         }
         last = key;
         struct timespec ts = {
