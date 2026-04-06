@@ -249,10 +249,8 @@ void lcd_fit(int fd, char text[]) {
 /* control LCD */
 void *LCD(void *arg) {
     (void) arg;
-    # define BUS 1
-    # define ADDRESS 0x27
-    int lcd_fd = open("/dev/i2c-" + BUS, O_RDWR);
-    ioctl(lcd_fd, I2C_SLAVE, ADDRESS);
+    int lcd_fd = open("/dev/i2c-1", O_RDWR);
+    ioctl(lcd_fd, I2C_SLAVE, 0x27);
 
     // & (AND) means that the bits that are both one return 1, otherwise return 0
     // | (OR) means that the bits that are both zero return 0, otherwise return 1
@@ -277,8 +275,8 @@ void *LCD(void *arg) {
     lcd_clear(lcd_fd);
 
     /* keypad config */
-    int rowpins[] = {17, 27, 22, 23};
-    int colpins[] = {24, 25, 5, 6};
+    unsigned int rowpins[] = {17, 27, 22, 23};
+    unsigned int colpins[] = {24, 25, 5, 6};
     char keys[4][4] = {"123A", "456B", "789C", "*0#D"};
     char *letters[10] = {" ", ".,?!-:;'", "abc", "def", "ghi", "jkl", "mno", "pqrs", "tuv", "wxyz"};
 
@@ -289,7 +287,7 @@ void *LCD(void *arg) {
     struct gpiod_line_settings *out_settings = gpiod_line_settings_new();
     gpiod_line_settings_set_direction(out_settings, GPIOD_LINE_DIRECTION_OUTPUT);
     struct gpiod_line_config *out_config = gpiod_line_config_new();
-    gpiod_line_config_add_line_settings(out_config, rowpins, 4, out_settings);
+    gpiod_line_config_add_line_settings(out_config, colpins, 4, out_settings);
     rows = gpiod_chip_request_lines(chip, NULL, out_config);
     gpiod_line_settings_free(out_settings);
     gpiod_line_config_free(out_config);
@@ -297,7 +295,7 @@ void *LCD(void *arg) {
     gpiod_line_settings_set_direction(in_settings, GPIOD_LINE_DIRECTION_INPUT);
     gpiod_line_settings_set_bias(in_settings, GPIOD_LINE_BIAS_PULL_DOWN);
     struct gpiod_line_config *in_config = gpiod_line_config_new();
-    gpiod_line_config_add_line_settings(in_config, colpins, 4, in_settings);
+    gpiod_line_config_add_line_settings(in_config, rowpins, 4, in_settings);
     cols = gpiod_chip_request_lines(chip, NULL, in_config);
     gpiod_line_settings_free(in_settings);
     gpiod_line_config_free(in_config);
@@ -329,7 +327,7 @@ void *LCD(void *arg) {
             nanosleep(&ts, NULL);
             
             for (int ri = 0; ri < 4; ri++) {
-                if (gpiod_line_request_get_value(rows, rowpins[ri]) == 1) {
+                if (gpiod_line_request_get_value(rows, rowpins[ri]) == GPIOD_LINE_VALUE_ACTIVE) {
                     key = keys[ri][ci];
                     break;
                 }
@@ -397,7 +395,7 @@ void *LCD(void *arg) {
                 switch (key) {
                     case '#':
                         /* parse dotenv values for prohibited and allowed */
-                        if (env_load("./.env.local", false) == 0) {
+                        if (env_load("./.env.local", false) == -1) {
                             lcd_print(lcd_fd, "File Error", 0);
                             printf("Error occurred while getting ./.env.local");
                             sleep(2);
@@ -444,6 +442,7 @@ void *LCD(void *arg) {
                     default:
                         if (isdigit(key) && strlen(value) < 6) {
                             value[strlen(value)] = key;
+                            value[strlen(value)] = '\0';
                             char *show = concat("Passcode: ", value);
                             lcd_print(lcd_fd, show, 0);
                             free(show);
@@ -460,7 +459,6 @@ void *LCD(void *arg) {
             }
         } else if (textMode == 1 && textTime != 0 && (time(NULL) - textTime >= 1) && strlen(textMessage) < 28) {
             if (textLetter) textMessage[strlen(textMessage)] = letters[textLetter][textLetterLength % strlen(letters[textLetter])];
-            textMessage[strlen(textMessage)] = '\0';
             textTime = 0;
             textLetterLength = 0;
             textLetter = '\0';
@@ -491,7 +489,11 @@ int main() {
     while (1) {
         int *client_fd = malloc(sizeof(int));
         *client_fd = accept(server_fd, NULL, NULL);
-        if (*client_fd < 0) { perror("accept"); free(client_fd); continue; }
+        if (*client_fd < 0) {
+            perror("accept");
+            free(client_fd);
+            continue;
+        }
 
         pthread_t thread;
         pthread_create(&thread, NULL, handle_client, client_fd);
