@@ -284,8 +284,23 @@ void *LCD(void *arg) {
 
     /* initialize gpios */
     struct gpiod_chip *chip = gpiod_chip_open("/dev/gpiochip0");
-    struct gpiod_line *rows[4];
-    struct gpiod_line *cols[4];
+    struct gpiod_line_request *rows[4];
+    struct gpiod_line_request *cols[4];
+    struct gpiod_line_settings *out_settings = gpiod_line_settings_new();
+    gpiod_line_settings_set_direction(out_settings, GPIOD_LINE_DIRECTION_OUTPUT);
+    struct gpiod_line_config *out_config = gpiod_line_config_new();
+    gpiod_line_config_add_line_settings(out_config, rowpins, 4, out_settings);
+    rows = gpiod_chip_request_lines(chip, NULL, out_config);
+    gpiod_line_settings_free(out_settings);
+    gpiod_line_config_free(out_config);
+    struct gpiod_line_settings *in_settings = gpiod_line_settings_new();
+    gpiod_line_settings_set_direction(in_settings, GPIOD_LINE_DIRECTION_INPUT);
+    gpiod_line_settings_set_bias(in_settings, GPIOD_LINE_BIAS_PULL_DOWN);
+    struct gpiod_line_config *in_config = gpiod_line_config_new();
+    gpiod_line_config_add_line_settings(in_config, colpins, 4, in_settings);
+    cols = gpiod_chip_request_lines(chip, NULL, in_config);
+    gpiod_line_settings_free(in_settings);
+    gpiod_line_config_free(in_config);
     for (int i = 0; i < 4; ++i) {
         rows[i] = gpiod_chip_get_line(chip, rowpins[i]);
         gpiod_line_request_output(rows[i], "keypad", 0);
@@ -319,7 +334,7 @@ void *LCD(void *arg) {
     while (1) {
         char key = 0;
         for (int ci = 0; ci < 4; ci++) {
-            gpiod_line_set_value(cols[ci], 1);
+            gpiod_line_request_set_value(rows, colpins[ci], GPIOD_LINE_VALUE_ACTIVE);
             struct timespec ts = {
                 .tv_sec = 0,
                 .tv_nsec = 1000000
@@ -327,13 +342,13 @@ void *LCD(void *arg) {
             nanosleep(&ts, NULL);
             
             for (int ri = 0; ri < 4; ri++) {
-                if (gpiod_line_get_value(rows[ri]) == 1) {
+                if (gpiod_line_request_get_value(cols, rowpins[ri]) == 1) {
                     key = keys[ri][ci];
                     break;
                 }
             }
             
-            gpiod_line_set_value(cols[ci], 0);
+            gpiod_line_request_set_value(cols, colpins[ci], GPIOD_LINE_VALUE_INACTIVE);
             if (key) break;
         }
         if (key && key != last) {
