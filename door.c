@@ -288,7 +288,7 @@ void *LCD(void *arg) {
     gpiod_line_settings_set_direction(out_settings, GPIOD_LINE_DIRECTION_OUTPUT);
     struct gpiod_line_config *out_config = gpiod_line_config_new();
     gpiod_line_config_add_line_settings(out_config, colpins, 4, out_settings);
-    rows = gpiod_chip_request_lines(chip, NULL, out_config);
+    cols = gpiod_chip_request_lines(chip, NULL, out_config);
     gpiod_line_settings_free(out_settings);
     gpiod_line_config_free(out_config);
     struct gpiod_line_settings *in_settings = gpiod_line_settings_new();
@@ -296,7 +296,7 @@ void *LCD(void *arg) {
     gpiod_line_settings_set_bias(in_settings, GPIOD_LINE_BIAS_PULL_DOWN);
     struct gpiod_line_config *in_config = gpiod_line_config_new();
     gpiod_line_config_add_line_settings(in_config, rowpins, 4, in_settings);
-    cols = gpiod_chip_request_lines(chip, NULL, in_config);
+    rows = gpiod_chip_request_lines(chip, NULL, in_config);
     gpiod_line_settings_free(in_settings);
     gpiod_line_config_free(in_config);
 
@@ -340,7 +340,10 @@ void *LCD(void *arg) {
             if (textMode == 1) {
                 if (isdigit(key) != 0 && strlen(textMessage) < 28) {
                     if (key != textLetter) {
-                        if (textLetter) textMessage[strlen(textMessage)] = *letters[textLetter] + textLetterLength % strlen(letters[textLetter]);
+                        if (textLetter) {
+                            textMessage[strlen(textMessage)] = letters[textLetter - '0'][textLetterLength % strlen(letters[textLetter - '0'])];
+                            textMessage[strlen(textMessage)] = '\0';
+                        }
                         textTime = time(NULL);
                         textLetterLength = 0;
                         textLetter = key;
@@ -453,12 +456,16 @@ void *LCD(void *arg) {
             if (key == '#') printf("Action: Submitted.");
             else if (key == '*') printf("Action: Deleted.");
             else {
-                char *show = concat(&key, " pressed");
+                char keystr[2] = {key, '\0'};
+                char *show = concat(keystr, " pressed");
                 printf("Action: %s", show);
                 free(show);
             }
         } else if (textMode == 1 && textTime != 0 && (time(NULL) - textTime >= 1) && strlen(textMessage) < 28) {
-            if (textLetter) textMessage[strlen(textMessage)] = letters[textLetter][textLetterLength % strlen(letters[textLetter])];
+            if (textLetter) {
+                textMessage[strlen(textMessage)] = letters[textLetter - '0'][textLetterLength % strlen(letters[textLetter - '0'])];
+                textMessage[strlen(textMessage)] = '\0';
+            }
             textTime = 0;
             textLetterLength = 0;
             textLetter = '\0';
