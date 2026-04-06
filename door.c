@@ -284,8 +284,8 @@ void *LCD(void *arg) {
 
     /* initialize gpios */
     struct gpiod_chip *chip = gpiod_chip_open("/dev/gpiochip0");
-    struct gpiod_line_request *rows[4];
-    struct gpiod_line_request *cols[4];
+    struct gpiod_line_request *rows;
+    struct gpiod_line_request *cols;
     struct gpiod_line_settings *out_settings = gpiod_line_settings_new();
     gpiod_line_settings_set_direction(out_settings, GPIOD_LINE_DIRECTION_OUTPUT);
     struct gpiod_line_config *out_config = gpiod_line_config_new();
@@ -301,19 +301,6 @@ void *LCD(void *arg) {
     cols = gpiod_chip_request_lines(chip, NULL, in_config);
     gpiod_line_settings_free(in_settings);
     gpiod_line_config_free(in_config);
-    for (int i = 0; i < 4; ++i) {
-        rows[i] = gpiod_chip_get_line(chip, rowpins[i]);
-        gpiod_line_request_output(rows[i], "keypad", 0);
-    }
-    struct gpiod_line_request_config config = {
-        .consumer = "keypad",
-        .request_type = GPIOD_LINE_REQUEST_DIRECTION_INPUT,
-        .flags = GPIOD_LINE_REQUEST_FLAG_BIAS_PULL_DOWN
-    };
-    for (int i = 0; i < 4; ++i) {
-        cols[i] = gpiod_chip_get_line(chip, colpins[i]);
-        gpiod_line_request(cols[i], &config, 0);
-    }
 
     /* keypad variables */
     char value[7] = "";
@@ -334,7 +321,7 @@ void *LCD(void *arg) {
     while (1) {
         char key = 0;
         for (int ci = 0; ci < 4; ci++) {
-            gpiod_line_request_set_value(rows, colpins[ci], GPIOD_LINE_VALUE_ACTIVE);
+            gpiod_line_request_set_value(cols, colpins[ci], GPIOD_LINE_VALUE_ACTIVE);
             struct timespec ts = {
                 .tv_sec = 0,
                 .tv_nsec = 1000000
@@ -342,7 +329,7 @@ void *LCD(void *arg) {
             nanosleep(&ts, NULL);
             
             for (int ri = 0; ri < 4; ri++) {
-                if (gpiod_line_request_get_value(cols, rowpins[ri]) == 1) {
+                if (gpiod_line_request_get_value(rows, rowpins[ri]) == 1) {
                     key = keys[ri][ci];
                     break;
                 }
