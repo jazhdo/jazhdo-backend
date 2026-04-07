@@ -422,7 +422,6 @@ void *LCD(void *arg) {
                         }
                         lcd_print(lcd_fd, "Passcode:", 0);
                         value[0] = '\0';
-                        value[1] = '\0';
                         printf("Length of value: %d", strlen(value));
                         break;
                     case '*':
@@ -447,8 +446,8 @@ void *LCD(void *arg) {
                         break;
                     default:
                         if (isdigit(key) && strlen(value) < 6) {
+                            value[strlen(value) + 1] = '\0';
                             value[strlen(value)] = key;
-                            value[strlen(value)] = '\0';
                             printf("\nPasscode: %s", value);
                             char *show = concat("Passcode: ", value);
                             lcd_print(lcd_fd, show, 0);
