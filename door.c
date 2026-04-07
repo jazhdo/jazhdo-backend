@@ -329,7 +329,6 @@ void *LCD(void *arg) {
             for (int ri = 0; ri < 4; ri++) {
                 if (gpiod_line_request_get_value(rows, rowpins[ri]) == GPIOD_LINE_VALUE_ACTIVE) {
                     key = keys[ri][ci];
-                    printf("\nWhen row %d was set to 1, column %d recieved 1.", ri, ci);
                     break;
                 }
             }
@@ -423,6 +422,7 @@ void *LCD(void *arg) {
                         }
                         lcd_print(lcd_fd, "Passcode:", 0);
                         value[0] = '\0';
+                        printf("Length of value: %d", strlen(value));
                         break;
                     case '*':
                         if (strlen(value) > 0) value[strlen(value) - 1] = '\0';
@@ -448,7 +448,7 @@ void *LCD(void *arg) {
                         if (isdigit(key) && strlen(value) < 6) {
                             value[strlen(value)] = key;
                             value[strlen(value)] = '\0';
-                            printf("Passcode: %s", value);
+                            printf("\nPasscode: %s", value);
                             char *show = concat("Passcode: ", value);
                             lcd_print(lcd_fd, show, 0);
                             free(show);
