@@ -311,7 +311,7 @@ void *LCD(void *arg) {
 
     lcd_print(lcd_fd, "Init Code Done", 0);
     printf("Initial Code Completed");
-    sleep(1);
+    sleep(2);
     lcd_clear(lcd_fd);
     lcd_print(lcd_fd, "Passcode:", 0);
 
@@ -448,7 +448,7 @@ void *LCD(void *arg) {
                         if (isdigit(key) && strlen(value) < 6) {
                             value[strlen(value)] = key;
                             value[strlen(value)] = '\0';
-                            char *show = concat("Passcode: ", value);
+                            char *show = concat("Passcode: ", key);
                             lcd_print(lcd_fd, show, 0);
                             free(show);
                         }
