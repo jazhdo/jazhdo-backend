@@ -422,6 +422,7 @@ void *LCD(void *arg) {
                         }
                         lcd_print(lcd_fd, "Passcode:", 0);
                         value[0] = '\0';
+                        value[1] = '\0';
                         printf("Length of value: %d", strlen(value));
                         break;
                     case '*':
