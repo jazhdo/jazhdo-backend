@@ -472,7 +472,7 @@ void *LCD(void *arg) {
                 printf("\nAction: %s", show);
                 free(show);
              }
-        } else if (textMode == 1 && textTime != 0 && (time(NULL) - textTime >= 1200) && strlen(textMessage) < 28) {
+        } else if (textMode == 1 && textTime != 0 && (get_ms() - textTime >= 1200) && strlen(textMessage) < 28) {
             if (textLetter) {
                 textMessage[strlen(textMessage)] = letters[textLetter - '0'][textLetterLength % strlen(letters[textLetter - '0'])];
                 textMessage[strlen(textMessage)] = '\0';
