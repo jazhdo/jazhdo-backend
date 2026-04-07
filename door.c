@@ -10,6 +10,7 @@
 # include <netinet/in.h>
 # include <netinet/tcp.h>
 # include <time.h>
+# include <stdint.h>
 # include <linux/i2c-dev.h>
 # include <sys/ioctl.h>
 # include <fcntl.h>
@@ -170,6 +171,13 @@ void delay_microseconds(int us) {
         long elapsed = (now.tv_sec - start.tv_sec) * 1000000 + (now.tv_nsec - start.tv_nsec) / 1000;
         if (elapsed >= us) break;
     }
+}
+
+/* get_ms: returns current time in milliseconds */
+int64_t get_ms() {
+    struct timespec ts;
+    timespec_get(&ts, TIME_UTC);
+    return (int64_t)ts.tv_sec * 1000 + (ts.tv_nsec / 1000000);
 }
 
 /* send a byte data to fd */
@@ -344,7 +352,7 @@ void *LCD(void *arg) {
                             textMessage[strlen(textMessage)] = letters[textLetter - '0'][textLetterLength % strlen(letters[textLetter - '0'])];
                             textMessage[strlen(textMessage)] = '\0';
                         }
-                        textTime = time(NULL);
+                        textTime = get_ms();
                         textLetterLength = 0;
                         textLetter = key;
                     } else textLetterLength++;
@@ -464,7 +472,7 @@ void *LCD(void *arg) {
                 printf("\nAction: %s", show);
                 free(show);
              }
-        } else if (textMode == 1 && textTime != 0 && (time(NULL) - textTime >= 1) && strlen(textMessage) < 28) {
+        } else if (textMode == 1 && textTime != 0 && (time(NULL) - textTime >= 1200) && strlen(textMessage) < 28) {
             if (textLetter) {
                 textMessage[strlen(textMessage)] = letters[textLetter - '0'][textLetterLength % strlen(letters[textLetter - '0'])];
                 textMessage[strlen(textMessage)] = '\0';
