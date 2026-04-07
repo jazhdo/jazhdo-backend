@@ -356,6 +356,7 @@ void *LCD(void *arg) {
                         textLetterLength = 0;
                         textLetter = key;
                     } else textLetterLength++;
+                    printf("\nMessage: %s", textMessage);
                     char *show = concat("msg:", textMessage);
                     lcd_fit(lcd_fd, show);
                     free(show);
@@ -378,12 +379,6 @@ void *LCD(void *arg) {
                     });
                     */
                     printf("\nMessage sent: %s", textMessage);
-                    /* textReset() for reference*/
-                    /* function textReset() {
-                        textTime = null;
-                        textLetterLength = 0;
-                        textLetter = '\0';
-                    } */
                     textTime = 0;
                     textLetterLength = 0;
                     textLetter = '\0';
@@ -403,7 +398,6 @@ void *LCD(void *arg) {
                     lcd_print(lcd_fd, "Passcode:", 0);
                 }
             } else {
-                printf("\nKeypress recieved: %c", key);
                 switch (key) {
                     case '#':
                         /* parse dotenv values for prohibited and allowed */
@@ -413,7 +407,7 @@ void *LCD(void *arg) {
                             sleep(2);
                         } else if (strlen(value) < 6) {
                             lcd_print(lcd_fd, "6 digits only", 0);
-                            printf("\nIncomplete passcode entered.");
+                            printf("\nIncomplete passcode %s entered.", value);
                             sleep(2);
                         } else if (getenv((const char *)value) && atoi(getenv((const char *)value)) == 0) {
                             lcd_print(lcd_fd, "Prohibited.", 0);
@@ -430,7 +424,6 @@ void *LCD(void *arg) {
                         }
                         lcd_print(lcd_fd, "Passcode:", 0);
                         value[0] = '\0';
-                        printf("Length of value: %d", strlen(value));
                         break;
                     case '*':
                         if (strlen(value) > 0) value[strlen(value) - 1] = '\0';
@@ -480,6 +473,7 @@ void *LCD(void *arg) {
             textTime = 0;
             textLetterLength = 0;
             textLetter = '\0';
+            printf("\nMessage: %s", textMessage);
             char *show = concat("msg:", textMessage);
             lcd_fit(lcd_fd, show);
             free(show);
