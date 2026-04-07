@@ -349,8 +349,8 @@ void *LCD(void *arg) {
                 if (isdigit(key) != 0 && strlen(textMessage) < 28) {
                     if (key != textLetter) {
                         if (textLetter) {
+                            textMessage[strlen(textMessage) + 1] = '\0';
                             textMessage[strlen(textMessage)] = letters[textLetter - '0'][textLetterLength % strlen(letters[textLetter - '0'])];
-                            textMessage[strlen(textMessage)] = '\0';
                         }
                         textTime = get_ms();
                         textLetterLength = 0;
@@ -467,8 +467,8 @@ void *LCD(void *arg) {
              }
         } else if (textMode == 1 && textTime != 0 && (get_ms() - textTime >= 1200) && strlen(textMessage) < 28) {
             if (textLetter) {
+                textMessage[strlen(textMessage) + 1] = '\0';
                 textMessage[strlen(textMessage)] = letters[textLetter - '0'][textLetterLength % strlen(letters[textLetter - '0'])];
-                textMessage[strlen(textMessage)] = '\0';
             }
             textTime = 0;
             textLetterLength = 0;
