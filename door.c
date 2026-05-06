@@ -43,7 +43,7 @@ FILE *open_stream(void) {
     return pipe;
 }
 
-/* handle client connection */
+/* handle_client: handle client connection */
 void *handle_client(void *arg) {
     int client_fd = *(int *)arg;
     free(arg);
@@ -51,30 +51,61 @@ void *handle_client(void *arg) {
     int flag = 1;
     setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
 
+    /* get http request */
     char req[1024] = {0};
     read(client_fd, req, sizeof(req) - 1);
 
-    if (strstr(req, "GET / ")) {
+    /* HTTP request parsing */
+    char method[8] = "\n";
+    char path[256] = "\n";
+    sscanf(req, "%7s %255s", method, path);
+
+    /* TODO: Make it so path can be dissected into the format: /path/to/endpoint?q=what-are-cats&date=3/6/2026&other=nothing */
+    if (method == "GET" && path == "/") {
         dprintf(client_fd,
             "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/html\r\n\r\n"
-            "<html><body style='margin:0'>"
-            "<img src='/stream' style='width:100%%'>"
-            "</body></html>\r\n");
+            "Content-Type: text/html\r\n"
+            "\r\n"
+            "<!DOCTYPE HTML>"
+            "<html>"
+            "<head>"
+            "</head>"
+            "<body style='margin:0px'>"
+                "<img src='/stream' style='width:100%%'>"
+            "</body>"
+            "</html>"
+        );
         close(client_fd);
         return NULL;
     }
-
-    if (strstr(req, "GET /record/start")) {
+    
+    /* endpoint to start recording */
+    else if (method == "GET" && path == "/record/start") {
         if (!recording) recording = fopen("recording.mjpeg", "wb");
-        dprintf(client_fd, "HTTP/1.1 200 OK\r\n\r\nRecording started\r\n");
+        dprintf(client_fd,
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/html\r\n"
+            "\r\n"
+            "<!DOCTYPE HTML>"
+            "<html>"
+            "<head>"
+            "</head>"
+            "<body>"
+                "<h1>Recording Started.</h1>"
+            "</body>"
+            "</html>"
+        );
         close(client_fd);
         return NULL;
     }
 
-    if (strstr(req, "GET /record/stop")) {
+    /* endpoint to stop recording */
+    else if (method == "GET" && path == "/record/stop") {
         pthread_mutex_lock(&rec_lock);
-        if (recording) { fclose((FILE *)recording); recording = NULL; }
+        if (recording) {
+            fclose((FILE *)recording);
+            recording = NULL;
+        }
         pthread_mutex_unlock(&rec_lock);
         char filename[64];
         time_t t = time(NULL);
@@ -84,64 +115,78 @@ void *handle_client(void *arg) {
         char cmd[256];
         snprintf(cmd, sizeof(cmd), "ffmpeg -y -framerate 60 -f mjpeg -i recording.mjpeg -c:v copy %s &", filename);
         system(cmd);
-        dprintf(client_fd, "HTTP/1.1 200 OK\r\n\r\nRecording stopped\r\n");
+        dprintf(client_fd,
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/html\r\n"
+            "\r\n"
+            "<!DOCTYPE HTML>"
+            "<html>"
+            "<head>"
+            "</head>"
+            "<body>"
+                "<h1>Recording Stopped.</h1>"
+            "</body>"
+            "</html>"
+        );
         close(client_fd);
         return NULL;
     }
 
     /* stream endpoint */
-    dprintf(client_fd,
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: multipart/x-mixed-replace; boundary=%s\r\n"
-        "Cache-Control: no-cache\r\n\r\n", BOUNDARY);
+    else if (method == "GET" && path == "/stream") {
+        dprintf(client_fd,
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: multipart/x-mixed-replace; boundary=%s\r\n"
+            "Cache-Control: no-cache\r\n\r\n", BOUNDARY);
 
-    unsigned char *frame = malloc(BUFSIZE);
-    if (!frame) {
-        close(client_fd);
-        return NULL;
-    }
-    int len = 0;
-    int c, prev = 0;
-
-    while ((c = fgetc(cam)) != EOF) {
-        if (len < BUFSIZE) frame[len++] = c;
-        if (prev == 0xFF && c == 0xD9) {
-            dprintf(client_fd,
-                "--%s\r\n"
-                "Content-Type: image/jpeg\r\n"
-                "Content-Length: %d\r\n\r\n",
-                BOUNDARY, len);
-            if (write(client_fd, frame, len) < 0) break;
-            dprintf(client_fd, "\r\n");
-            pthread_mutex_lock(&rec_lock);
-            if (recording) {
-                FILE *r = (FILE *)recording;
-                if (r) {
-                    printf("writing frame %d bytes\n", len);
-                    fwrite(frame, 1, len, (FILE *)recording);
-                    fflush((FILE *)recording);
-                }
-            }
-            pthread_mutex_unlock(&rec_lock);
-            len = 0;
+        unsigned char *frame = malloc(BUFSIZE);
+        if (!frame) {
+            close(client_fd);
+            return NULL;
         }
-        prev = c;
+        int len = 0;
+        int c, prev = 0;
+
+        while ((c = fgetc(cam)) != EOF) {
+            if (len < BUFSIZE) frame[len++] = c;
+            if (prev == 0xFF && c == 0xD9) {
+                dprintf(client_fd,
+                    "--%s\r\n"
+                    "Content-Type: image/jpeg\r\n"
+                    "Content-Length: %d\r\n\r\n",
+                    BOUNDARY, len);
+                if (write(client_fd, frame, len) < 0) break;
+                dprintf(client_fd, "\r\n");
+                pthread_mutex_lock(&rec_lock);
+                if (recording) {
+                    FILE *r = (FILE *)recording;
+                    if (r) {
+                        printf("writing frame %d bytes\n", len);
+                        fwrite(frame, 1, len, (FILE *)recording);
+                        fflush((FILE *)recording);
+                    }
+                }
+                pthread_mutex_unlock(&rec_lock);
+                len = 0;
+            }
+            prev = c;
+        }
+
+        /* drain frames while waiting for next client */
+        fd_set fds;
+        struct timeval tv;
+        unsigned char drain[4096];
+        while (1) {
+            FD_ZERO(&fds);
+            FD_SET(server_fd, &fds);
+            tv.tv_sec = 0;
+            tv.tv_usec = 0;
+            if (select(server_fd + 1, &fds, NULL, NULL, &tv) > 0) break;
+            if (!recording) fread(drain, 1, sizeof(drain), cam);
+        }
+        free(frame);
     }
 
-    /* drain pipe while waiting for next client */
-    fd_set fds;
-    struct timeval tv;
-    unsigned char drain[4096];
-    while (1) {
-        FD_ZERO(&fds);
-        FD_SET(server_fd, &fds);
-        tv.tv_sec = 0;
-        tv.tv_usec = 0;
-        if (select(server_fd + 1, &fds, NULL, NULL, &tv) > 0) break;
-        if (!recording) fread(drain, 1, sizeof(drain), cam);
-    }
-
-    free(frame);
     close(client_fd);
     return NULL;
 }
@@ -158,7 +203,7 @@ int start_server(void) {
     addr.sin_port = htons(PORT);
     if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) { perror("bind"); exit(1); }
     if (listen(fd, 5) < 0) { perror("listen"); exit(1); }
-    printf("http://0.0.0.0:%d\n", PORT);
+    printf("Camera server hosted at http://0.0.0.0:%d\n", PORT);
     return fd;
 }
 
@@ -282,13 +327,13 @@ void *LCD(void *arg) {
     lcd_write(lcd_fd, 0x60);
     lcd_clear(lcd_fd);
 
-    /* keypad config */
+    // Keypad Config
     unsigned int rowpins[] = {17, 27, 22, 23};
     unsigned int colpins[] = {24, 25, 5, 6};
     char keys[4][4] = {"123A", "456B", "789C", "*0#D"};
     char *letters[10] = {" ", ".,?!-:;'", "abc", "def", "ghi", "jkl", "mno", "pqrs", "tuv", "wxyz"};
 
-    /* initialize gpios */
+    // Initialize GPIOs
     struct gpiod_chip *chip = gpiod_chip_open("/dev/gpiochip0");
     struct gpiod_line_request *rows;
     struct gpiod_line_request *cols;
@@ -370,12 +415,12 @@ void *LCD(void *arg) {
                     lcd_fit(lcd_fd, show);
                     free(show);
                 } else if (key == '#') {
-                    /* Send Message */
+                    /* Send Message (This was previously for firestore) */
                     /*
                     await addDoc(collection(db, "messages"), {
                         contactMethod: 'Door lock',
                         message: textMessage, 
-                        createdAt: new Date()
+                        cLCDreatedAt: new Date()
                     });
                     */
                     printf("\nMessage sent: %s", textMessage);
@@ -384,7 +429,7 @@ void *LCD(void *arg) {
                     textLetter = '\0';
                     textMessage[0] = '\0';
                     lcd_clear(lcd_fd);
-                    lcd_print(lcd_fd, "Message Sent.", 0);
+                    lcd_print(lcd_fd, "msg --> nowhere", 0);
                     lcd_print(lcd_fd, "msg:", 0);
                 } else if (key == 'B') {
                     textTime = 0;

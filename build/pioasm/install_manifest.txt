@@ -1,0 +1,5 @@
+/home/jazhdo/jazhdo-backend/build/pioasm-install/pioasm/pioasm
+/home/jazhdo/jazhdo-backend/build/pioasm-install/pioasm/pioasmTargets.cmake
+/home/jazhdo/jazhdo-backend/build/pioasm-install/pioasm/pioasmTargets-release.cmake
+/home/jazhdo/jazhdo-backend/build/pioasm-install/pioasm/pioasmConfig.cmake
+/home/jazhdo/jazhdo-backend/build/pioasm-install/pioasm/pioasmConfigVersion.cmake

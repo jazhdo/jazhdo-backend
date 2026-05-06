@@ -1,0 +1,7 @@
+/home/jazhdo/jazhdo-backend/build/pioasm/CMakeFiles/pioasm.dir
+/home/jazhdo/jazhdo-backend/build/pioasm/CMakeFiles/edit_cache.dir
+/home/jazhdo/jazhdo-backend/build/pioasm/CMakeFiles/rebuild_cache.dir
+/home/jazhdo/jazhdo-backend/build/pioasm/CMakeFiles/list_install_components.dir
+/home/jazhdo/jazhdo-backend/build/pioasm/CMakeFiles/install.dir
+/home/jazhdo/jazhdo-backend/build/pioasm/CMakeFiles/install/local.dir
+/home/jazhdo/jazhdo-backend/build/pioasm/CMakeFiles/install/strip.dir
