@@ -61,7 +61,7 @@ void *handle_client(void *arg) {
     sscanf(req, "%7s %255s", method, path);
 
     /* TODO: Make it so path can be dissected into the format: /path/to/endpoint?q=what-are-cats&date=3/6/2026&other=nothing */
-    if (method == "GET" && path == "/") {
+    if (strcmp(method, "GET") == 0 && strcmp(path, "/") == 0) {
         dprintf(client_fd,
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: text/html\r\n"
@@ -80,7 +80,7 @@ void *handle_client(void *arg) {
     }
     
     /* endpoint to start recording */
-    else if (method == "GET" && path == "/record/start") {
+    else if (strcmp(method, "GET") == 0 && strcmp(path, "/record/start") == 0) {
         if (!recording) recording = fopen("recording.mjpeg", "wb");
         dprintf(client_fd,
             "HTTP/1.1 200 OK\r\n"
@@ -100,7 +100,7 @@ void *handle_client(void *arg) {
     }
 
     /* endpoint to stop recording */
-    else if (method == "GET" && path == "/record/stop") {
+    else if (strcmp(method, "GET") == 0 && strcmp(path, "/record/stop") == 0) {
         pthread_mutex_lock(&rec_lock);
         if (recording) {
             fclose((FILE *)recording);
@@ -509,7 +509,8 @@ void *LCD(void *arg) {
                 char *show = concat(keystr, " pressed");
                 printf("\nAction: %s", show);
                 free(show);
-             }
+                fflush(NULL);
+            }
         } else if (textMode == 1 && textTime != 0 && (get_ms() - textTime >= 1200) && strlen(textMessage) < 28) {
             if (textLetter) {
                 textMessage[strlen(textMessage) + 1] = '\0';
@@ -534,6 +535,7 @@ void *LCD(void *arg) {
 }
 
 int main() {
+    setbuf(stdout, NULL);
     signal(SIGPIPE, SIG_IGN);
     cam = open_stream();
     server_fd = start_server();
