@@ -365,9 +365,10 @@ void *LCD(void *arg) {
 
     // Schedule variables
     // TODO: Make this dynamic (Load from a JSON file or smth)
-    char *schedule[][4] = {
-        {"12345", "07:25", "14:55", "At School"},
-        {"3", "16:00", "18:05", "Chinese Class"}
+    char *schedule[][5] = {
+        {"12345", "07:25", "14:55", "At School", "\0"},
+        {"3", "16:00", "18:05", "Chinese Class", "\0"},
+        "\0"
     };
 
     // Initial LCD text
@@ -415,7 +416,7 @@ void *LCD(void *arg) {
                 char buffer[80];
                 strftime(buffer, 80, "%H:%M", tm_info);
                 int hour, minute;
-                sscanf(buffer, "%d:%d", &hour, minute);
+                sscanf(buffer, "%d:%d", &hour, &minute);
                 char weekday[2];
                 strftime(weekday, 2, "%w", tm_info);
                 for (int i = 0; schedule[i] != 0; i++) {
