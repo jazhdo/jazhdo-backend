@@ -366,9 +366,9 @@ void *LCD(void *arg) {
     // Schedule variables
     // TODO: Make this dynamic (Load from a JSON file or smth)
     char *schedule[][4] = {
-        (char[]){"12345", "07:25", "14:55", "At School"},
-        (char[]){"3", "16:00", "18:05", "Chinese Class"}
-    }
+        {"12345", "07:25", "14:55", "At School"},
+        {"3", "16:00", "18:05", "Chinese Class"}
+    };
 
     // Initial LCD text
     lcd_print(lcd_fd, "Init Code Done", 0);
@@ -410,6 +410,7 @@ void *LCD(void *arg) {
                     [2] - End time (In the same format as the start time)
                     [3] - Message (What is displayed (<= 16 characters long or it'll get cut off))
                 */
+                time_t t = time(NULL);
                 struct tm *tm_info = localtime(&t);
                 char buffer[80];
                 strftime(buffer, 80, "%H:%M", tm_info);
@@ -417,7 +418,6 @@ void *LCD(void *arg) {
                 sscanf(buffer, "%d:%d", &hour, minute);
                 char weekday[2];
                 strftime(weekday, 2, "%w", tm_info);
-                char message[16] = 0;
                 for (int i = 0; schedule[i] != 0; i++) {
                     int start_hour, start_minute, end_hour, end_minute;
                     sscanf(schedule[i][1], "%d:%d", &start_hour, &start_minute);
@@ -427,10 +427,11 @@ void *LCD(void *arg) {
                         lcd_print(lcd_fd, schedule[i][3]);
                         break;
                     }
+                }
             } else if (statusMessage) {
                 statusMessage = 0;
                 // Restore previous display (Message or text)
-                lcd_clear();
+                lcd_clear(lcd_fd);
                 if (textMode == 1) {
                     char *show = concat("msg:", textMessage);
                     lcd_fit(lcd_fd, show);
