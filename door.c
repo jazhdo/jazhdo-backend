@@ -436,7 +436,7 @@ void *LCD(void *arg) {
                     lcd_fit(lcd_fd, show);
                     free(show);
                 } else {
-                    show = concat("Passcode: ", value);
+                    char *show = concat("Passcode: ", value);
                     lcd_print(lcd_fd, show, 0);
                     free(show);
                 }
