@@ -365,7 +365,7 @@ void *LCD(void *arg) {
 
     // Parse schedule (1st is for like "1st, 2nd, etc.", 2nd is for time or message)
     char *schedule[30];
-    printf("%d", (env_load("./schedule.env", false));
+    printf("%d", env_load("./schedule.env", false));
     for (int i = 0; i < 30; i += 3) {
         schedule[i] = malloc(sizeof(char));
         char one[3] = { (char)(i/3 + 'a'), 'a', '\0' };
