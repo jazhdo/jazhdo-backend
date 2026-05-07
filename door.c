@@ -365,10 +365,9 @@ void *LCD(void *arg) {
 
     // Schedule variables
     // TODO: Make this dynamic (Load from a JSON file or smth)
-    char *schedule[][5] = {
-        {"12345", "07:25", "14:55", "At School", "\0"},
-        {"3", "16:00", "18:05", "Chinese Class", "\0"},
-        "\0"
+    char *schedule[][4] = {
+        {"12345", "07:25", "14:55", "At School"},
+        {"3", "16:00", "18:05", "Chinese Class"},
     };
 
     // Initial LCD text
