@@ -71,7 +71,7 @@ void *handle_client(void *arg) {
             "<head>"
             "</head>"
             "<body style='margin:0px'>"
-                "<img src='/stream' style='width:100%%'>"
+                "<img src='/stream' style='width:100%%;display:inline-block;'>"
             "</body>"
             "</html>"
         );
@@ -361,7 +361,24 @@ void *LCD(void *arg) {
     char textMessage[100] = "";
     int textLetterLength = 0;
     char textLetter = '\0';
+    bool statusMessage = 0;
 
+    // Parse schedule (1st is for like "1st, 2nd, etc.", 2nd is for time or message)
+    char *schedule[30];
+    for (int i = 0; i < 30; i += 3) {
+        schedule[i] = malloc(sizeof(char));
+        char one[3] = { (char)(i/3 + 'a'), 'a', '\0' };
+        schedule[i] = getenv((const char *)one);
+        schedule[i + 1] = malloc(sizeof(char));
+        char two[3] = { (char)(i/3 + 'a'), 'b', '\0' };
+        schedule[i] = getenv((const char *)two);
+        schedule[i + 2] = malloc(sizeof(char));
+        char three[3] = { (char)(i/3 + 'a'), 'c', '\0' };
+        schedule[i] = getenv((const char *)three);
+    }
+    for (int i = 0; i < 30; i++) printf("%s\n", schedule[i]);
+
+    // Initial LCD text
     lcd_print(lcd_fd, "Init Code Done", 0);
     printf("Initial Code Completed");
     sleep(2);
@@ -390,6 +407,16 @@ void *LCD(void *arg) {
             if (key) break;
         }
         if (key && key != last) {
+            if (key - 'C' == 0) {
+                if (!statusMessage) {
+                    statusMessage = 1;
+                    // Show status message
+
+                } else {
+                    statusMessage = 0;
+                    // Restore previous display (Message or text)
+                }
+            }
             if (textMode == 1) {
                 if (isdigit(key) != 0 && strlen(textMessage) < 28) {
                     if (key != textLetter) {
