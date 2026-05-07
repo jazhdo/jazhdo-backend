@@ -363,21 +363,12 @@ void *LCD(void *arg) {
     char textLetter = '\0';
     bool statusMessage = 0;
 
-    // Parse schedule (1st is for like "1st, 2nd, etc.", 2nd is for time or message)
-    char *schedule[30];
-    printf("%d", env_load("./schedule.env", false));
-    for (int i = 0; i < 30; i += 3) {
-        schedule[i] = malloc(sizeof(char));
-        char one[3] = { (char)(i/3 + 'a'), 'a', '\0' };
-        schedule[i] = getenv((const char *)one);
-        schedule[i + 1] = malloc(sizeof(char));
-        char two[3] = { (char)(i/3 + 'a'), 'b', '\0' };
-        schedule[i] = getenv((const char *)two);
-        schedule[i + 2] = malloc(sizeof(char));
-        char three[3] = { (char)(i/3 + 'a'), 'c', '\0' };
-        schedule[i] = getenv((const char *)three);
+    // Schedule variables
+    // TODO: Make this dynamic (Load from a JSON file or smth)
+    char *schedule[][4] = {
+        (char[]){"12345", "07:25", "14:55", "At School"},
+        (char[]){"3", "16:00", "18:05", "Chinese Class"}
     }
-    for (int i = 0; i < 30; i++) printf("%s\n", schedule[i]);
 
     // Initial LCD text
     lcd_print(lcd_fd, "Init Code Done", 0);
@@ -408,14 +399,46 @@ void *LCD(void *arg) {
             if (key) break;
         }
         if (key && key != last) {
-            if (key - 'C' == 0) {
-                if (!statusMessage) {
-                    statusMessage = 1;
-                    // Show status message
+            if (key - 'C' == 0 && !statusMessage) {
+                statusMessage = 1;
+                // Show status message
 
+                // Get current time (For comparing end times and start times for each "event" to decide which string to show (show first matching one))
+                /* Format:
+                    [0] - Weekdays (Check if the string contains the weekday number (0-6))
+                    [1] - Start time (In the format of HH:MM as in hour, minute)
+                    [2] - End time (In the same format as the start time)
+                    [3] - Message (What is displayed (<= 16 characters long or it'll get cut off))
+                */
+                struct tm *tm_info = localtime(&t);
+                char buffer[80];
+                strftime(buffer, 80, "%H:%M", tm_info);
+                int hour, minute;
+                sscanf(buffer, "%d:%d", &hour, minute);
+                char weekday[2];
+                strftime(weekday, 2, "%w", tm_info);
+                char message[16] = 0;
+                for (int i = 0; schedule[i] != 0; i++) {
+                    int start_hour, start_minute, end_hour, end_minute;
+                    sscanf(schedule[i][1], "%d:%d", &start_hour, &start_minute);
+                    sscanf(schedule[i][2], "%d:%d", &end_hour, &end_minute);
+                    if (strstr(schedule[i][0], weekday) && start_hour < hour && start_minute < minute && end_hour > hour && end_minute > minute) {
+                        lcd_clear(lcd_fd);
+                        lcd_print(lcd_fd, schedule[i][3]);
+                        break;
+                    }
+            } else if (statusMessage) {
+                statusMessage = 0;
+                // Restore previous display (Message or text)
+                lcd_clear();
+                if (textMode == 1) {
+                    char *show = concat("msg:", textMessage);
+                    lcd_fit(lcd_fd, show);
+                    free(show);
                 } else {
-                    statusMessage = 0;
-                    // Restore previous display (Message or text)
+                    show = concat("Passcode: ", value);
+                    lcd_print(lcd_fd, show, 0);
+                    free(show);
                 }
             }
             if (textMode == 1) {
