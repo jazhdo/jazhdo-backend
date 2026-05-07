@@ -424,7 +424,7 @@ void *LCD(void *arg) {
                     sscanf(schedule[i][2], "%d:%d", &end_hour, &end_minute);
                     if (strstr(schedule[i][0], weekday) && start_hour < hour && start_minute < minute && end_hour > hour && end_minute > minute) {
                         lcd_clear(lcd_fd);
-                        lcd_print(lcd_fd, schedule[i][3]);
+                        lcd_print(lcd_fd, schedule[i][3], 0);
                         break;
                     }
                 }
