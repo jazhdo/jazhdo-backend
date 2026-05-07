@@ -400,6 +400,20 @@ void *LCD(void *arg) {
             gpiod_line_request_set_value(cols, colpins[ci], GPIOD_LINE_VALUE_INACTIVE);
             if (key) break;
         }
+        if ((!key || key - 'C' != 0) && statusMessage) {
+            statusMessage = 0;
+            // Restore previous display (Message or text)
+            lcd_clear(lcd_fd);
+            if (textMode == 1) {
+                char *show = concat("msg:", textMessage);
+                lcd_fit(lcd_fd, show);
+                free(show);
+            } else {
+                char *show = concat("Passcode: ", value);
+                lcd_print(lcd_fd, show, 0);
+                free(show);
+            }
+        }
         if (key && key != last) {
             if (key - 'C' == 0 && !statusMessage) {
                 statusMessage = 1;
@@ -430,19 +444,6 @@ void *LCD(void *arg) {
                         lcd_print(lcd_fd, schedule[i][3], 0);
                         break;
                     }
-                }
-            } else if (statusMessage) {
-                statusMessage = 0;
-                // Restore previous display (Message or text)
-                lcd_clear(lcd_fd);
-                if (textMode == 1) {
-                    char *show = concat("msg:", textMessage);
-                    lcd_fit(lcd_fd, show);
-                    free(show);
-                } else {
-                    char *show = concat("Passcode: ", value);
-                    lcd_print(lcd_fd, show, 0);
-                    free(show);
                 }
             }
             if (textMode == 1) {
