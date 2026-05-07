@@ -133,7 +133,7 @@ void *handle_client(void *arg) {
     }
 
     /* stream endpoint */
-    else if (method == "GET" && path == "/stream") {
+    else if (strcmp(method, "GET") == 0 && strcmp(path, "/stream") == 0) {
         dprintf(client_fd,
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: multipart/x-mixed-replace; boundary=%s\r\n"
@@ -419,7 +419,8 @@ void *LCD(void *arg) {
                 sscanf(buffer, "%d:%d", &hour, &minute);
                 char weekday[2];
                 strftime(weekday, 2, "%w", tm_info);
-                for (int i = 0; schedule[i] != 0; i++) {
+                int schedule_len = sizeof(schedule) / sizeof(schedule[0]);
+                for (int i = 0; i < schedule_len; i++) {
                     int start_hour, start_minute, end_hour, end_minute;
                     sscanf(schedule[i][1], "%d:%d", &start_hour, &start_minute);
                     sscanf(schedule[i][2], "%d:%d", &end_hour, &end_minute);
