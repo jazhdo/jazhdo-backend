@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cd ~/jazhdo-backend
+
+gcc -o door.out door.c "dotenv.c" "cJSON.c" -lpthread -lgpiod -lrt -lcurl
+
+echo "Run ./door.out to run the file."

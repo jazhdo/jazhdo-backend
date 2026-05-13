@@ -9,3 +9,5 @@ package.json
 package-lock.json
 
 credentials.cmake
+
+.vscode/

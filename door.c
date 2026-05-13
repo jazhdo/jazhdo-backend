@@ -16,11 +16,14 @@
 # include <fcntl.h>
 # include <ctype.h>
 # include "dotenv.h"
+# include <curl/curl.h>
+# include "cJSON.h"
 # include <gpiod.h>
 
 # define PORT 8080
 # define BOUNDARY "jpgboundary"
 # define BUFSIZE (1024 * 1024)
+# define MAX_SCHEDULE_EVENTS 10
 
 FILE *cam = NULL;
 volatile FILE *recording = NULL;
@@ -191,6 +194,61 @@ void *handle_client(void *arg) {
     return NULL;
 }
 
+typedef struct {
+    char *data;
+    size_t len;
+} Buffer;
+
+static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *ud) {
+    size_t b = size * nmemb;
+    Buffer *buf = ud;
+    if (!(buf->data = realloc(buf->data, buf->len + b + 1))) return 0;
+    memcpy(buf->data + buf->len, ptr, b);
+    buf->data[buf->len += b] = '\0';
+    return b;
+}
+
+static char *fetch_endpoint(const char *url) {
+    Buffer buf = {NULL, 0};
+    long http = 0;
+    CURL *curl = curl_easy_init();
+    if (!curl) return NULL;
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+    CURLcode rc = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http);
+    curl_easy_cleanup(curl);
+    if (rc != CURLE_OK || http != 200) { free(buf.data); return NULL; }
+    return buf.data;
+}
+
+char *(*parse_endpoint(const char *url, int *out_rows))[4] {
+    *out_rows = 0;
+    char *json = fetch_endpoint(url);
+    if (!json) return NULL;
+    cJSON *root = cJSON_Parse(json);
+    free(json);
+    if (!cJSON_IsArray(root)) { cJSON_Delete(root); return NULL; }
+    int n = cJSON_GetArraySize(root);
+    if (n > MAX_SCHEDULE_EVENTS) n = MAX_SCHEDULE_EVENTS;
+    char *(*arr)[4] = calloc(n, sizeof(*arr));
+    if (!arr) { cJSON_Delete(root); return NULL; }
+    cJSON *item; int row = 0;
+    cJSON_ArrayForEach(item, root) {
+        if (!cJSON_IsArray(item) || cJSON_GetArraySize(item) < 4) continue;
+        for (int c = 0; c < 4; c++) {
+            cJSON *cell = cJSON_GetArrayItem(item, c);
+            arr[row][c] = strdup(cJSON_IsString(cell) ? cell->valuestring : "");
+        }
+        row++;
+    }
+    *out_rows = row;
+    cJSON_Delete(root);
+    return arr;
+}
+
 /* start http camera viewing server */
 int start_server(void) {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -310,7 +368,7 @@ void *LCD(void *arg) {
     // ~ (NOT) means that each bit is reversed, 0s to 1s, 1s to 0s
     // ^ (XOR) means that the bits that are the same return 0 and the ones that are different return 1
     
-    /* LCD initialization */
+    // LCD initialization
     lcd_write(lcd_fd, 0x30);
     delay_microseconds(4500);
     lcd_write(lcd_fd, 0x30);
@@ -327,7 +385,7 @@ void *LCD(void *arg) {
     lcd_write(lcd_fd, 0x60);
     lcd_clear(lcd_fd);
 
-    // Keypad Config
+    // Keypad config
     unsigned int rowpins[] = {17, 27, 22, 23};
     unsigned int colpins[] = {24, 25, 5, 6};
     char keys[4][4] = {"123A", "456B", "789C", "*0#D"};
@@ -353,7 +411,7 @@ void *LCD(void *arg) {
     gpiod_line_settings_free(in_settings);
     gpiod_line_config_free(in_config);
 
-    /* keypad variables */
+    // Keypad variables
     char value[7] = "";
     char last = 0;
     int textMode = 0;
@@ -363,14 +421,8 @@ void *LCD(void *arg) {
     char textLetter = '\0';
     bool statusMessage = 0;
 
-    // Schedule variables
-    // TODO: Make this dynamic (Load from a JSON file or smth)
-    char *schedule[][4] = {
-        {"0123456", "00:00", "7:00", "Bedtime"},
-        {"12345", "07:25", "14:55", "At School"},
-        {"3", "16:00", "18:05", "Chinese Class"},
-        {"0123456", "21:00", "23:59", "Bedtime"}
-    };
+    int row_count = 0;
+    char *(*schedule)[4] = parse_endpoint("http://localhost:3000/door-keypad/", &row_count);
 
     // Initial LCD text
     lcd_print(lcd_fd, "Init Code Done", 0);
@@ -471,21 +523,15 @@ void *LCD(void *arg) {
                     lcd_fit(lcd_fd, show);
                     free(show);
                 } else if (key == '#') {
-                    /* Send Message (This was previously for firestore) */
-                    /*
-                    await addDoc(collection(db, "messages"), {
-                        contactMethod: 'Door lock',
-                        message: textMessage, 
-                        cLCDreatedAt: new Date()
-                    });
-                    */
                     printf("\nMessage sent: %s", textMessage);
                     textTime = 0;
                     textLetterLength = 0;
                     textLetter = '\0';
                     textMessage[0] = '\0';
                     lcd_clear(lcd_fd);
+                    // TODO: Send message (Prob via a curl request to a nodejs server)
                     lcd_print(lcd_fd, "msg --> nowhere", 0);
+                    sleep(1);
                     lcd_print(lcd_fd, "msg:", 0);
                 } else if (key == 'B') {
                     textTime = 0;
@@ -501,7 +547,7 @@ void *LCD(void *arg) {
             } else {
                 switch (key) {
                     case '#':
-                        /* parse dotenv values for prohibited and allowed */
+                        // Parse dotenv values for prohibited and allowed
                         if (env_load("./.env.local", false) == -1) {
                             lcd_print(lcd_fd, "File Error", 0);
                             printf("\nError occurred while getting ./.env.local");
@@ -596,7 +642,7 @@ int main() {
     cam = open_stream();
     server_fd = start_server();
 
-    /* start LCD and keypad operations */
+    // Start LCD and keypad operations
     pthread_t lcd;
     pthread_create(&lcd, NULL, LCD, NULL);
     pthread_detach(lcd);
